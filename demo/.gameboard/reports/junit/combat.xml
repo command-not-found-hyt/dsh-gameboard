@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="gameboard-demo" tests="2" failures="1" errors="0" time="0.046">
+  <testsuite name="combat.damage" tests="2" failures="1" errors="0" skipped="0" time="0.046">
+    <testcase classname="combat.damage" name="crit stacks" file="tests/combat/damage.test.ts" time="0.024">
+      <failure message="expected 150 to be 120">AssertionError: expected 150 to be 120
+    at tests/combat/damage.test.ts:12:5</failure>
+    </testcase>
+    <testcase classname="combat.damage" name="armor mitigation" file="tests/combat/damage.test.ts" time="0.022"/>
+  </testsuite>
+</testsuites>

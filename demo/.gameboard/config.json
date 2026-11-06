@@ -1,0 +1,16 @@
+{
+  "exclude": [
+    "node_modules/**",
+    "dist/**",
+    "**/*.map"
+  ],
+  "tests": {
+    "junit": [
+      ".gameboard/reports/junit/*.xml"
+    ],
+    "json": [
+      ".gameboard/reports/vitest.json"
+    ]
+  },
+  "maxFiles": 2000
+}

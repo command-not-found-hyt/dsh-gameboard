@@ -1,0 +1,56 @@
+{
+  "name": "dsh-gameboard",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Project status board for DSH: which game-dev work is built, which is tested, which needs a human decision, and which needs a manual step.",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "game-dev",
+    "project-board",
+    "kanban",
+    "multi-agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/command-not-found-hyt/dsh-gameboard.git"
+  },
+  "homepage": "https://github.com/command-not-found-hyt/dsh-gameboard#readme",
+  "bugs": {
+    "url": "https://github.com/command-not-found-hyt/dsh-gameboard/issues"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib/board.js",
+    "lib/scan.js",
+    "lib/scan.test.mjs",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE",
+    "AGENTS.template.md",
+    "demo/**"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  }
+}

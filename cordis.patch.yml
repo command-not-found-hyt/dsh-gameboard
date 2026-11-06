@@ -1,0 +1,11 @@
+- insert:
+    - id: gameboard
+      name: 'dsh-gameboard'
+      # 扫描根目录默认取当前工作区（没有工作区时取进程目录）。
+      # 想固定到某个游戏仓库，二选一：
+      #   1. 在本行加：
+      #        config:
+      #          root: 'D:\MyGame'
+      #   2. 在 <profile>/gameboard.json 里写（只影响本机，不进仓库）：
+      #        { "root": "D:\\MyGame" }
+      # 其余可选项：boardDir / scanIntervalSec / watch / promptDigest / maxFiles / machine / token

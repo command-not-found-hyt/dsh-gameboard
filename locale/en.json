@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Project Board",
+    "description": "Track which game-project work is built, which is tested, which is waiting for your decision, and which needs a manual step, with scheduled repo scans shared across machines."
+  }
+}
