@@ -493,9 +493,12 @@ export function apply(ctx, config = {}) {
 
   // ---- HTTP ---------------------------------------------------------------
 
-  const webServer = ctx.get('webServer');
-  if (webServer) {
-    ctx.effect(
+  // `webServer` may not exist yet when this plugin applies (service activation
+  // order is not guaranteed), so the routes wait for it instead of being
+  // skipped for the whole process lifetime.
+  ctx.inject(['webServer'], (scoped) => {
+    const webServer = scoped.webServer;
+    scoped.effect(
       () =>
         webServer.tapIndex((html) => {
           const tag = `<script>window.__GAMEBOARD_TOKEN__=${JSON.stringify(token)}</script>`;
@@ -505,7 +508,7 @@ export function apply(ctx, config = {}) {
       'gameboard: token injection',
     );
 
-    ctx.effect(
+    scoped.effect(
       () =>
         webServer.register({
           kind: 'exact',
@@ -522,7 +525,7 @@ export function apply(ctx, config = {}) {
       'gameboard: snapshot route',
     );
 
-    ctx.effect(
+    scoped.effect(
       () =>
         webServer.register({
           kind: 'exact',
@@ -547,7 +550,7 @@ export function apply(ctx, config = {}) {
         }),
       'gameboard: action route',
     );
-  }
+  });
 
   async function performAction(body) {
     const op = body && body.op;
@@ -877,36 +880,36 @@ export function apply(ctx, config = {}) {
 
   // ---- prompt digest and command -----------------------------------------
 
-  const systemPrompt = ctx.get('systemPrompt');
-  if (systemPrompt && settings.promptDigest) {
-    ctx.effect(
-      () =>
-        systemPrompt.section({
-          name: 'gameboard.digest',
-          order: 850,
-          text: () => {
-            const counts = snapshot.counts || {};
-            if (!counts.total) return '';
-            const parts = [
-              `项目看板（${counts.total} 项）：已完成开发 ${counts.built}，测试通过 ${counts.tested}`,
-            ];
-            if (counts.decisionPending) parts.push(`待用户拍板 ${counts.decisionPending}`);
-            if (counts.manualPending) parts.push(`待用户手动 ${counts.manualPending}`);
-            if (counts.testFailing) parts.push(`测试失败 ${counts.testFailing}`);
-            const head = `${parts.join('，')}。`;
-            const detail = digest(snapshot.items, { limit: 6 });
-            return `${head}\n${detail}\n状态详情用 gameboard 工具；维护规则见扫描仓库根目录的 AGENTS.md；拍板结果只能由用户在面板记录。`;
-          },
-        }),
-      'gameboard: prompt section',
-    );
+  if (settings.promptDigest) {
+    ctx.inject(['systemPrompt'], (scoped) => {
+      scoped.effect(
+        () =>
+          scoped.systemPrompt.section({
+            name: 'gameboard.digest',
+            order: 850,
+            text: () => {
+              const counts = snapshot.counts || {};
+              if (!counts.total) return '';
+              const parts = [
+                `项目看板（${counts.total} 项）：已完成开发 ${counts.built}，测试通过 ${counts.tested}`,
+              ];
+              if (counts.decisionPending) parts.push(`待用户拍板 ${counts.decisionPending}`);
+              if (counts.manualPending) parts.push(`待用户手动 ${counts.manualPending}`);
+              if (counts.testFailing) parts.push(`测试失败 ${counts.testFailing}`);
+              const head = `${parts.join('，')}。`;
+              const detail = digest(snapshot.items, { limit: 6 });
+              return `${head}\n${detail}\n状态详情用 gameboard 工具；维护规则见扫描仓库根目录的 AGENTS.md；拍板结果只能由用户在面板记录。`;
+            },
+          }),
+        'gameboard: prompt section',
+      );
+    });
   }
 
-  const commands = ctx.get('commands');
-  if (commands) {
-    ctx.effect(
+  ctx.inject(['commands'], (scoped) => {
+    scoped.effect(
       () =>
-        commands.register({
+        scoped.commands.register({
           name: 'board',
           description: '打印项目看板摘要',
           handler: async () => ({
@@ -918,7 +921,7 @@ export function apply(ctx, config = {}) {
         }),
       'gameboard: command',
     );
-  }
+  });
 
   // ---- scheduling ---------------------------------------------------------
 
