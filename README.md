@@ -1,6 +1,6 @@
 # dsh-gameboard · 项目看板
 
-给 [DSH](https://github.com/deepseek-ai)（DeepSeek Harness）用的游戏项目状态板插件。
+给 DSH（DeepSeek Harness）用的游戏项目状态板插件。
 
 多终端、多智能体一起做游戏时，最难回答的四个问题它一直摆在桌面上：
 
