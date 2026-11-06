@@ -21,6 +21,8 @@ import {
   serializeItem,
   slugId,
   summarize,
+  timelineEvents,
+  timelineInsights,
 } from './lib/board.js';
 import { attachGit, readGitLog } from './lib/git.js';
 import { scanBoard } from './lib/scan.js';
@@ -63,6 +65,7 @@ function emptySnapshot(dir) {
     activeRoot: '',
     repos: [],
     git: { available: false, commits: 0 },
+    insights: { transitions: [], slow: [], stalled: [] },
   };
 }
 
@@ -301,6 +304,7 @@ export function apply(ctx, config = {}) {
           }
         }
         next.git = gitInfo;
+        next.insights = timelineInsights(next.items);
         next.scan = {
           ...next.scan,
           durationMs: Date.now() - startedAt,
@@ -690,6 +694,20 @@ export function apply(ctx, config = {}) {
       const next = await refresh();
       return { counts: next.counts, scannedAt: next.generatedAt };
     }
+    if (action === 'timeline') {
+      const days = Number(args.days) > 0 ? Math.min(365, Number(args.days)) : 7;
+      const requested = Number(args.limit);
+      const limit = Number.isFinite(requested) && requested > 0 ? Math.min(200, Math.floor(requested)) : 30;
+      const events = timelineEvents(snapshot.items, { days, limit });
+      const insights = timelineInsights(snapshot.items);
+      return {
+        windowDays: days,
+        total: events.length,
+        events,
+        slow: insights.slow.slice(0, 5),
+        stalled: insights.stalled.slice(0, 5),
+      };
+    }
     if (snapshot.items.length === 0 && !snapshot.board.initialized) await runScan();
     if (action === 'summary') {
       return {
@@ -802,11 +820,12 @@ export function apply(ctx, config = {}) {
           properties: {
             action: {
               type: 'string',
-              enum: ['summary', 'list', 'get', 'add', 'update', 'note', 'scan', 'repos'],
+              enum: ['summary', 'list', 'get', 'add', 'update', 'note', 'scan', 'repos', 'timeline'],
               description:
-                'summary=总览与摘要；list=按条件列工作项；get=单个工作项详情；add=新增工作项；update=改阶段/优先级/测试/待拍板问题；note=追加备注；scan=立即重新扫描仓库；repos=列出可切换的仓库（带 root 参数则切换）。',
+                'summary=总览与摘要；list=按条件列工作项；get=单个工作项详情；add=新增工作项；update=改阶段/优先级/测试/待拍板问题；note=追加备注；scan=立即重新扫描仓库；repos=列出/切换仓库；timeline=最近一段时间的里程碑事件、偏离项与停滞项。',
             },
             root: { type: 'string', description: 'repos 动作要切换到的仓库绝对路径' },
+            days: { type: 'integer', description: 'timeline 的时间窗（天），默认 7' },
             id: { type: 'string', description: '工作项 id（get/update/note 必填）' },
             area: { type: 'string', description: '模块/领域名称' },
             gate: {

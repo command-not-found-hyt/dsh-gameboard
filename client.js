@@ -117,6 +117,10 @@ window.__ModuleLoader__.load({
       'timeline.leadEmpty': '暂无完成项', 'timeline.stalled': '停滞 {days} 天',
       'duration.minutes': '{count} 分钟', 'duration.hours': '{count} 小时',
       'duration.days': '{count} 天',
+      'timeline.view': '视图', 'timeline.viewList': '列表', 'timeline.viewLanes': '泳道',
+      'timeline.slowTitle': '慢于中位', 'timeline.slowChip': '{title} · {transition} {duration}（中位 {median}）',
+      'transition.start': '开始', 'transition.build': '开发', 'transition.test': '测试',
+      'transition.ship': '发布', 'transition.lead': '全周期',
       'state.loading': '正在读取状态板…',
       'state.noSnapshot': '还没有拿到状态板数据。', 'state.retry': '重试',
       'state.offline': '无法连接 Host，显示的是上次数据。', 'error.title': '请求失败',
@@ -206,6 +210,10 @@ window.__ModuleLoader__.load({
       'timeline.leadEmpty': 'nothing completed yet', 'timeline.stalled': 'stalled {days}d',
       'duration.minutes': '{count} min', 'duration.hours': '{count} h',
       'duration.days': '{count} d',
+      'timeline.view': 'View', 'timeline.viewList': 'List', 'timeline.viewLanes': 'Lanes',
+      'timeline.slowTitle': 'Slower than median', 'timeline.slowChip': '{title} · {transition} {duration} (median {median})',
+      'transition.start': 'Start', 'transition.build': 'Build', 'transition.test': 'Test',
+      'transition.ship': 'Ship', 'transition.lead': 'Lead time',
       'state.loading': 'Loading the board…',
       'state.noSnapshot': 'No board data yet.', 'state.retry': 'Retry',
       'state.offline': 'Cannot reach the host; showing the last data.', 'error.title': 'Request failed',
@@ -307,8 +315,19 @@ window.__ModuleLoader__.load({
 .gb-timeline-kind{display:flex;min-width:0}.gb-timeline-title{min-width:0;color:var(--dsw-alias-label-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gb-timeline-commit{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;line-height:16px;color:var(--dsw-alias-label-tertiary)}
 .gb-timeline-summary{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary)}
+.gb-lanes{display:flex;flex-direction:column;gap:8px;min-width:0}
+.gb-lane{display:grid;grid-template-columns:minmax(110px,170px) minmax(0,1fr);gap:10px;align-items:center;min-width:0}
+.gb-lane-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary)}
+.gb-lane-track{position:relative;height:20px;min-width:0;border-radius:999px;background:var(--dsw-alias-bg-skeleton,var(--dsw-alias-fill-l2,rgba(127,127,127,.16)))}
+.gb-lane-bar{position:absolute;top:8px;height:4px;border-radius:999px;background:var(--dsw-alias-label-tertiary);opacity:.7}
+.gb-lane-dot{position:absolute;top:6px;width:8px;height:8px;border-radius:50%;background:var(--dsw-alias-label-primary);transform:translateX(-50%)}
+.gb-lane-dot[data-done="false"]{background:var(--dsw-alias-bg-layer-1,#fff);border:1px solid var(--dsw-alias-border-l3)}
+.gb-lane-today{position:absolute;top:2px;bottom:2px;width:1px;background:var(--dsw-alias-border-l3)}
+.gb-lane-axis{display:flex;justify-content:space-between;padding-left:180px;font-size:10px;line-height:14px;color:var(--dsw-alias-label-tertiary)}
+.gb-slow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.gb-slow-chip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;font-size:11px;line-height:16px;color:var(--dsw-alias-state-warn-primary,var(--dsw-alias-label-secondary));background:var(--dsw-alias-bg-layer-2,transparent);border:1px solid var(--dsw-alias-state-warn-secondary,var(--dsw-alias-border-l2));border-radius:999px}
 .gb-timeline-area{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary);text-align:right}
-@media (max-width:820px){.gb-root{padding:14px 14px 22px}.gb-head-actions{flex-wrap:wrap;justify-content:flex-end}.gb-repo-switch{max-width:100%}.gb-repo-dir{max-width:160px}.gb-area{grid-template-columns:minmax(90px,1fr) minmax(140px,2fr)}.gb-area .gb-area-meta{grid-column:1 / -1}.gb-change{grid-template-columns:80px minmax(0,1fr)}.gb-change .gb-change-kind{display:none}.gb-timeline-row{grid-template-columns:52px minmax(0,1fr)}.gb-timeline-kind,.gb-timeline-commit,.gb-timeline-area{display:none}}
+@media (max-width:820px){.gb-root{padding:14px 14px 22px}.gb-head-actions{flex-wrap:wrap;justify-content:flex-end}.gb-repo-switch{max-width:100%}.gb-repo-dir{max-width:160px}.gb-area{grid-template-columns:minmax(90px,1fr) minmax(140px,2fr)}.gb-area .gb-area-meta{grid-column:1 / -1}.gb-change{grid-template-columns:80px minmax(0,1fr)}.gb-change .gb-change-kind{display:none}.gb-timeline-row{grid-template-columns:52px minmax(0,1fr)}.gb-timeline-kind,.gb-timeline-commit,.gb-timeline-area{display:none}.gb-lane{grid-template-columns:minmax(80px,110px) minmax(0,1fr)}.gb-lane-axis{padding-left:120px}}
 @media (prefers-reduced-motion:reduce){.gb-spinner{animation-duration:2.4s}.gb-bar-fill{transition:none}}
 `;
     function isObject(value) { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
@@ -498,6 +517,43 @@ window.__ModuleLoader__.load({
       const git = asObject(raw);
       return { available: asBool(git.available), commits: Math.max(0, asNumber(git.commits, 0)) };
     }
+    function normalizeInsights(raw) {
+      const insights = asObject(raw);
+      return {
+        transitions: asArray(insights.transitions).map((entry) => {
+          const item = asObject(entry);
+          return {
+            id: asString(item.id),
+            samples: Math.max(0, asNumber(item.samples, 0)),
+            medianMs: Math.max(0, asNumber(item.medianMs, 0)),
+          };
+        }),
+        slow: asArray(insights.slow)
+          .map((entry) => {
+            const item = asObject(entry);
+            return {
+              id: asString(item.id),
+              title: asString(item.title),
+              area: asString(item.area),
+              transition: asString(item.transition),
+              durationMs: Math.max(0, asNumber(item.durationMs, 0)),
+              medianMs: Math.max(0, asNumber(item.medianMs, 0)),
+            };
+          })
+          .filter((entry) => entry.id),
+        stalled: asArray(insights.stalled)
+          .map((entry) => {
+            const item = asObject(entry);
+            return {
+              id: asString(item.id),
+              title: asString(item.title),
+              area: asString(item.area),
+              days: Math.max(0, asNumber(item.days, 0)),
+            };
+          })
+          .filter((entry) => entry.id),
+      };
+    }
     function normalizeItem(raw, index) {
       const item = asObject(raw);
       const id = asString(item.id).trim();
@@ -612,6 +668,7 @@ window.__ModuleLoader__.load({
         activeRoot: asString(raw.activeRoot),
         repos: asArray(raw.repos).map(normalizeRepo).filter(Boolean),
         git: normalizeGitInfo(raw.git),
+        insights: normalizeInsights(raw.insights),
       };
     }
     function sortPendingItems(items) {
@@ -1121,6 +1178,7 @@ window.__ModuleLoader__.load({
       const [range, setRange] = React.useState('all');
       const [onlyOpen, setOnlyOpen] = React.useState(false);
       const [includeCommits, setIncludeCommits] = React.useState(true);
+      const [view, setView] = React.useState('list');
       const now = new Date();
       const rangeDays = range === 'all' ? 0 : Number(range);
       const cutoff = rangeDays > 0 ? now.getTime() - rangeDays * 86400000 : 0;
@@ -1190,6 +1248,41 @@ window.__ModuleLoader__.load({
         const at = Date.parse(item.updatedAt);
         return Number.isFinite(at) && now.getTime() - at > 7 * 86400000;
       }).length;
+
+      // Swimlanes: one row per item, x-axis spans the filtered items.
+      const lanes = items
+        .map((item) => {
+          const points = [];
+          if (item.createdAt) {
+            const at = Date.parse(item.createdAt);
+            if (Number.isFinite(at)) points.push({ at, field: 'createdAt' });
+          }
+          for (const spec of TIMELINE_EVENTS) {
+            if (spec.fromItem) continue;
+            const raw = item.milestones[spec.field];
+            const at = Date.parse(raw);
+            if (Number.isFinite(at)) points.push({ at, field: spec.field });
+          }
+          points.sort((left, right) => left.at - right.at);
+          if (points.length === 0) return null;
+          const start = points[0].at;
+          const shipped = Date.parse(item.milestones.shippedAt);
+          const end = Math.max(Number.isFinite(shipped) ? shipped : now.getTime(), start);
+          if (cutoff > 0 && end < cutoff) return null;
+          return { item, points, start, end };
+        })
+        .filter(Boolean);
+      const domainStart = lanes.length ? Math.min(...lanes.map((lane) => lane.start)) : now.getTime();
+      const domainEnd = lanes.length
+        ? Math.max(...lanes.map((lane) => lane.end), domainStart + 86400000)
+        : domainStart + 86400000;
+      const position = (at) => {
+        const ratio = (at - domainStart) / (domainEnd - domainStart);
+        return Math.max(0, Math.min(100, ratio * 100));
+      };
+      const labelByField = {};
+      for (const spec of TIMELINE_EVENTS) labelByField[spec.field] = spec.key;
+
       const filters = h(
         'div',
         { className: 'gb-timeline-filters' },
@@ -1232,6 +1325,17 @@ window.__ModuleLoader__.load({
         ),
         h(
           'label',
+          { className: 'gb-field gb-field-inline' },
+          h('span', { className: 'gb-field-label' }, tr('timeline.view')),
+          h(
+            'select',
+            { className: 'gb-select', value: view, onChange: (event) => setView(event.target.value) },
+            h('option', { value: 'list' }, tr('timeline.viewList')),
+            h('option', { value: 'lanes' }, tr('timeline.viewLanes')),
+          ),
+        ),
+        h(
+          'label',
           { className: 'gb-check' },
           h('input', {
             type: 'checkbox',
@@ -1266,7 +1370,127 @@ window.__ModuleLoader__.load({
           ? h('span', null, `git · ${snapshot.git.commits}`)
           : null,
       );
-      if (events.length === 0) {
+      const slow = snapshot.insights.slow.slice(0, 4);
+      const slowChips = slow.length
+        ? h(
+            'div',
+            { className: 'gb-slow' },
+            h('span', { className: 'gb-slow-chip' }, tr('timeline.slowTitle')),
+            slow.map((entry) =>
+              h(
+                'span',
+                {
+                  key: `${entry.id}:${entry.transition}`,
+                  className: 'gb-slow-chip',
+                  title: entry.title,
+                },
+                tr('timeline.slowChip', {
+                  title: entry.title,
+                  transition: tr(`transition.${entry.transition}`),
+                  duration: formatDuration(entry.durationMs, tr),
+                  median: formatDuration(entry.medianMs, tr),
+                }),
+              ),
+            ),
+          )
+        : null;
+      const laneNode = lanes.length
+        ? h(
+            'div',
+            { className: 'gb-lanes' },
+            h(
+              'div',
+              { className: 'gb-lane-axis' },
+              h('span', null, formatDate(new Date(domainStart))),
+              h('span', null, formatDate(new Date(domainEnd))),
+            ),
+            lanes.map((lane) =>
+              h(
+                'div',
+                { className: 'gb-lane', key: lane.item.id },
+                h(
+                  'span',
+                  {
+                    className: 'gb-lane-label',
+                    title: `${lane.item.title}${lane.item.area ? ` · ${lane.item.area}` : ''}`,
+                  },
+                  lane.item.title || tr('item.untitled'),
+                ),
+                h(
+                  'div',
+                  { className: 'gb-lane-track' },
+                  h('span', {
+                    className: 'gb-lane-bar',
+                    style: {
+                      left: `${position(lane.start)}%`,
+                      width: `${Math.max(0.5, position(lane.end) - position(lane.start))}%`,
+                    },
+                  }),
+                  lane.points.map((point) =>
+                    h('span', {
+                      key: `${point.field}-${point.at}`,
+                      className: 'gb-lane-dot',
+                      'data-done': 'true',
+                      style: { left: `${position(point.at)}%` },
+                      title: `${tr(labelByField[point.field] || 'milestone.created')} · ${formatTimelineStamp(new Date(point.at), now)}`,
+                    }),
+                  ),
+                  h('span', {
+                    className: 'gb-lane-today',
+                    style: { left: `${position(now.getTime())}%` },
+                    title: tr('timeline.today'),
+                  }),
+                ),
+              ),
+            ),
+          )
+        : null;
+      const listNode = h(
+        'div',
+        { className: 'gb-timeline' },
+        groups.map((group) =>
+          h(
+            'section',
+            { className: 'gb-timeline-group', key: group.key },
+            h('div', { className: 'gb-timeline-day' }, group.label),
+            h(
+              'div',
+              { className: 'gb-timeline-rows' },
+              group.events.map((event) =>
+                h(
+                  'div',
+                  { className: 'gb-timeline-row', key: event.key },
+                  h('span', { className: 'gb-timeline-time' }, formatClock(event.date)),
+                  h('span', { className: 'gb-timeline-kind' }, tr(event.label)),
+                  h(
+                    'span',
+                    {
+                      className: 'gb-timeline-title',
+                      title: event.isCommit && event.commit
+                        ? `${event.commit.subject} · ${formatDate(event.date)}`
+                        : `${event.item.title} · ${formatDate(event.date)}`,
+                    },
+                    event.item.title || tr('item.untitled'),
+                  ),
+                  h(
+                    'span',
+                    {
+                      className: 'gb-timeline-commit',
+                      title: event.commit ? event.commit.subject : undefined,
+                    },
+                    event.commit ? event.commit.hash : '',
+                  ),
+                  event.item.area
+                    ? h('span', { className: 'gb-timeline-area' }, event.item.area)
+                    : null,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      const bodyNode = view === 'lanes' ? laneNode : events.length > 0 ? listNode : null;
+      if (!bodyNode) {
         return h(
           'div',
           { className: 'gb-body' },
@@ -1285,50 +1509,8 @@ window.__ModuleLoader__.load({
         { className: 'gb-body' },
         filters,
         summary,
-        h(
-          'div',
-          { className: 'gb-timeline' },
-          groups.map((group) =>
-            h(
-              'section',
-              { className: 'gb-timeline-group', key: group.key },
-              h('div', { className: 'gb-timeline-day' }, group.label),
-              h(
-                'div',
-                { className: 'gb-timeline-rows' },
-                group.events.map((event) =>
-                  h(
-                    'div',
-                    { className: 'gb-timeline-row', key: event.key },
-                    h('span', { className: 'gb-timeline-time' }, formatClock(event.date)),
-                    h('span', { className: 'gb-timeline-kind' }, tr(event.label)),
-                    h(
-                      'span',
-                      {
-                        className: 'gb-timeline-title',
-                        title: event.isCommit && event.commit
-                          ? `${event.commit.subject} · ${formatDate(event.date)}`
-                          : `${event.item.title} · ${formatDate(event.date)}`,
-                      },
-                      event.item.title || tr('item.untitled'),
-                    ),
-                    h(
-                      'span',
-                      {
-                        className: 'gb-timeline-commit',
-                        title: event.commit ? event.commit.subject : undefined,
-                      },
-                      event.commit ? event.commit.hash : '',
-                    ),
-                    event.item.area
-                      ? h('span', { className: 'gb-timeline-area' }, event.item.area)
-                      : null,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+        slowChips,
+        bodyNode,
       );
     }
     function ChangesTab({ tr, snapshot }) {
