@@ -74,6 +74,8 @@ window.__ModuleLoader__.load({
       'pending.noQuestion': '这个问题还没有写明。', 'pending.evidence': '证据文件',
       'pending.evidenceNone': '没有匹配到文件', 'pending.evidenceMore': '另有 {count} 个文件',
       'pending.choose': '选择一个方案：', 'pending.noOptions': '这个问题还没有给出选项。',
+      'pending.customLabel': '或者自己写一个决定', 'pending.customPlaceholder': '输入你的决定，回车记录',
+      'pending.customSubmit': '记录',
       'pending.steps': '手动步骤 {done}/{total}', 'pending.estimate': '预估', 'pending.noSteps': '这个手动项没有可勾选的步骤。',
       'pending.markDone': '标记为已完成', 'pending.copy': '复制给 AI 的提示',
       'pending.copied': '提示已复制到剪贴板', 'pending.copyFailed': '复制失败，请手动选择文本。',
@@ -167,6 +169,9 @@ window.__ModuleLoader__.load({
       'pending.noQuestion': 'This question has not been written yet.', 'pending.evidence': 'Evidence files',
       'pending.evidenceNone': 'No files matched', 'pending.evidenceMore': '{count} more files',
       'pending.choose': 'Choose an option:', 'pending.noOptions': 'This question has no options yet.',
+      'pending.customLabel': 'Or write your own decision',
+      'pending.customPlaceholder': 'Type your decision, press Enter',
+      'pending.customSubmit': 'Record',
       'pending.steps': 'Manual steps {done}/{total}', 'pending.estimate': 'Estimate', 'pending.noSteps': 'This manual item has no steps to check off.',
       'pending.markDone': 'Mark as done', 'pending.copy': 'Copy prompt for the AI',
       'pending.copied': 'Prompt copied to the clipboard', 'pending.copyFailed': 'Copy failed; select the text manually.',
@@ -274,7 +279,11 @@ window.__ModuleLoader__.load({
 .gb-field-label{font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary)}.gb-field-value{font-size:13px;line-height:20px;color:var(--dsw-alias-label-primary);overflow-wrap:anywhere;white-space:pre-wrap}
 .gb-options{display:flex;flex-wrap:wrap;gap:6px}.gb-option{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;font:inherit;font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary);background:transparent;border:1px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-sm,8px);cursor:pointer}
 .gb-option:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);border-color:var(--dsw-alias-border-l3)}.gb-option:disabled{opacity:.45;cursor:not-allowed}
-.gb-option:focus-visible{outline:2px solid var(--dsw-alias-label-primary);outline-offset:2px}.gb-files{display:flex;flex-direction:column;gap:1px;margin:0;padding:0;list-style:none}
+.gb-option:focus-visible{outline:2px solid var(--dsw-alias-label-primary);outline-offset:2px}.gb-custom{display:flex;align-items:center;gap:8px;min-width:0}
+.gb-input{flex:1 1 auto;min-width:0;font:inherit;font-size:13px;line-height:20px;padding:5px 10px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1,#fff);border:1px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-sm,8px)}
+.gb-input:focus-visible{outline:2px solid var(--dsw-alias-label-primary);outline-offset:1px}
+.gb-input:disabled{opacity:.55;cursor:not-allowed}.gb-input::placeholder{color:var(--dsw-alias-label-tertiary)}
+.gb-files{display:flex;flex-direction:column;gap:1px;margin:0;padding:0;list-style:none}
 .gb-file{font-size:11px;line-height:17px;color:var(--dsw-alias-label-secondary);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}.gb-steps{display:flex;flex-direction:column;gap:2px}
 .gb-step{display:flex;align-items:flex-start;gap:8px;padding:3px 0;cursor:pointer}.gb-step[data-disabled="true"]{cursor:not-allowed}
 .gb-step input{margin:3px 0 0;accent-color:var(--dsw-alias-label-primary);cursor:inherit}.gb-step-text{min-width:0;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere}
@@ -924,7 +933,15 @@ window.__ModuleLoader__.load({
       return h('button', { type: 'button', className: 'gb-btn gb-btn-sm', onClick }, h(CopyIcon, { size: 12 }), tr('pending.copy'));
     }
     function DecisionCard({ tr, item, busy, writable, onDecide, onStep, onManualDone, onCopy }) {
+      const [custom, setCustom] = React.useState('');
       const options = item.decision.options;
+      const customValue = custom.trim();
+      const canSubmit = Boolean(customValue) && writable && !busy;
+      const submitCustom = (event) => {
+        event.preventDefault();
+        if (!canSubmit) return;
+        onDecide(item, customValue);
+      };
       const deadline = item.decision.deadline ? tr('pending.deadline', { date: formatDate(item.decision.deadline) }) : tr('pending.noDeadline');
       return h(
         'article',
@@ -948,6 +965,24 @@ window.__ModuleLoader__.load({
                 onClick: () => onDecide(item, option),
               }, h(CheckIcon, { size: 11 }), option)))
             : h('span', { className: 'gb-field-value' }, tr('pending.noOptions'))),
+        h('div', { className: 'gb-field' },
+          h('span', { className: 'gb-field-label' }, tr('pending.customLabel')),
+          h('form', { className: 'gb-custom', onSubmit: submitCustom },
+            h('input', {
+              className: 'gb-input',
+              type: 'text',
+              value: custom,
+              maxLength: 120,
+              disabled: !writable || busy,
+              placeholder: tr('pending.customPlaceholder'),
+              'aria-label': tr('pending.customLabel'),
+              onChange: (event) => setCustom(event.target.value),
+            }),
+            h('button', {
+              type: 'submit',
+              className: 'gb-btn gb-btn-sm',
+              disabled: !canSubmit,
+            }, tr('pending.customSubmit')))),
         h(ManualSteps, { tr, item, busy, writable, onStep, onManualDone }),
         item.derived.fileList.length > 0 || item.derived.missing ? h(Evidence, { tr, item, limit: 4 }) : null,
         h('div', { className: 'gb-actions' }, h(CopyButton, { tr, onClick: () => onCopy(item, 'decision') })),
