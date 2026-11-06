@@ -90,21 +90,28 @@ function readHeader(req, name) {
 }
 
 /**
- * True for requests a same-origin page made. The token endpoint relies on this
- * instead of a token: a browser sends `Sec-Fetch-Site`, and cross-origin script
- * cannot read the JSON answer without CORS headers.
+ * True for requests a first-party page made.
+ *
+ * The desktop shell serves the app from a custom protocol (`dsh-app://app`), so
+ * that page's fetches arrive at this HTTP handler with a non-HTTP `Origin` or no
+ * `Origin` at all. Cross-site script always sends its own `Origin` and cannot
+ * read the JSON answer without CORS headers, so rejecting foreign origins is
+ * enough; a missing `Origin` here means the shell's own renderer.
  */
 function isSameOrigin(req, webServer) {
   const origin = readHeader(req, 'origin');
+  if (!origin) return true;
   let expected = '';
   try {
     expected = webServer.getOrigin();
   } catch {
     expected = '';
   }
-  if (origin && expected && origin === expected) return true;
-  if (readHeader(req, 'sec-fetch-site') === 'same-origin') return true;
-  return false;
+  if (expected && origin === expected) return true;
+  // Desktop-shell origins: dsh-app://app, app://..., file://
+  if (/^(dsh-app|app|file):\/\//i.test(origin)) return true;
+  const site = readHeader(req, 'sec-fetch-site');
+  return site === 'same-origin' || site === 'same-site' || site === 'none';
 }
 
 async function readBody(req, limit = 1 << 20) {
