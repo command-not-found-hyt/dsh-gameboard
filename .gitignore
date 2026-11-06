@@ -3,7 +3,7 @@ node_modules/
 dist/
 
 # 看板的机器本地缓存（示例仓库也会生成）
-.gameboard/.cache/
+**/.gameboard/.cache/
 
 # 系统与编辑器
 .DS_Store

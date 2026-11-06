@@ -27,7 +27,25 @@ window.__ModuleLoader__.load({
       { id: 'overview', key: 'tab.overview' },
       { id: 'pending', key: 'tab.pending' },
       { id: 'board', key: 'tab.board' },
+      { id: 'timeline', key: 'tab.timeline' },
       { id: 'changes', key: 'tab.changes' },
+    ];
+    const MILESTONE_FIELDS = ['startedAt', 'builtAt', 'testedAt', 'shippedAt', 'decidedAt', 'manualDoneAt'];
+    const MILESTONE_STEPS = [
+      { id: 'created', field: 'createdAt', key: 'milestone.created', fromItem: true },
+      { id: 'started', field: 'startedAt', key: 'milestone.started' },
+      { id: 'built', field: 'builtAt', key: 'milestone.built' },
+      { id: 'tested', field: 'testedAt', key: 'milestone.tested' },
+      { id: 'shipped', field: 'shippedAt', key: 'milestone.shipped' },
+    ];
+    const TIMELINE_EVENTS = [
+      { field: 'createdAt', key: 'milestone.created', fromItem: true },
+      { field: 'startedAt', key: 'event.started' },
+      { field: 'builtAt', key: 'milestone.built' },
+      { field: 'testedAt', key: 'milestone.tested' },
+      { field: 'shippedAt', key: 'milestone.shipped' },
+      { field: 'decidedAt', key: 'event.decided' },
+      { field: 'manualDoneAt', key: 'event.manualDone' },
     ];
     const zh = {
       'nav.label': '项目状态板', 'panel.kicker': 'Gameboard',
@@ -37,8 +55,11 @@ window.__ModuleLoader__.load({
       'header.scan': '{files} 个文件 · {ms} ms', 'header.errors': '{count} 个错误',
       'header.truncated': '文件过多，已截断', 'header.revision': '版本 r{revision}',
       'header.writeOff': '未连接写入通道', 'header.writeOffHint': '页面没有注入写入令牌，当前只能查看，拍板和勾选按钮已禁用。',
+      'header.repoLabel': '仓库', 'header.repoUninitialized': '（未初始化）',
+      'header.reposRefresh': '刷新仓库列表',
       'tab.overview': '概览', 'tab.pending': '待处理',
-      'tab.board': '看板', 'tab.changes': '变更',
+      'tab.board': '看板', 'tab.timeline': '时间线',
+      'tab.changes': '变更',
       'stats.total': '工作项', 'stats.built': '已完成开发',
       'stats.tested': '已测通过', 'stats.decision': '待你拍板',
       'stats.manual': '待你手动', 'stats.failing': '测试失败',
@@ -76,7 +97,17 @@ window.__ModuleLoader__.load({
       'change.decision-added': '新增待拍板', 'change.decision-cleared': '拍板已清除',
       'change.manual-added': '新增手动项', 'change.manual-cleared': '手动项已清除',
       'change.test-failed': '测试失败', 'change.test-fixed': '测试修复',
-      'change.unknown': '其它变更', 'state.loading': '正在读取状态板…',
+      'change.unknown': '其它变更',
+      'timeline.areaFilter': '按领域筛选', 'timeline.allAreas': '全部领域',
+      'timeline.onlyOpen': '只看未完成', 'timeline.today': '今天',
+      'timeline.yesterday': '昨天', 'timeline.empty': '还没有里程碑记录',
+      'timeline.emptyHint': '工作项推进后，每一步里程碑会按日期记在这里。',
+      'milestone.label': '里程碑', 'milestone.created': '创建',
+      'milestone.started': '开始', 'milestone.built': '开发完成',
+      'milestone.tested': '测试通过', 'milestone.shipped': '发布',
+      'event.started': '开始执行', 'event.decided': '用户已拍板',
+      'event.manualDone': '手动项完成',
+      'state.loading': '正在读取状态板…',
       'state.noSnapshot': '还没有拿到状态板数据。', 'state.retry': '重试',
       'state.offline': '无法连接 Host，显示的是上次数据。', 'error.title': '请求失败',
       'error.dismiss': '关闭', 'error.action': '操作失败：{message}',
@@ -89,6 +120,7 @@ window.__ModuleLoader__.load({
       'action.decideBusy': '正在记录拍板…', 'action.stepBusy': '正在保存步骤…',
       'action.scanBusy': '正在扫描…', 'action.scanDone': '扫描完成',
       'action.initDone': '看板已初始化', 'action.decided': '已记录：{choice}',
+      'action.repoSwitched': '已切换到 {repo}', 'action.reposRefreshed': '仓库列表已刷新',
       'action.stepSaved': '步骤已更新', 'action.doneSaved': '已标记为完成',
       'copy.promptDecision': '工作项 {id}（{title}）需要拍板。\n问题：{question}\n选项：{options}\n影响：{impact}\n截止：{deadline}\n请帮我分析各选项的利弊，并给出建议。', 'copy.promptManual': '工作项 {id}（{title}）需要我手动完成以下步骤：\n{steps}\n完成后请更新状态板。',
       'copy.promptTest': '工作项 {id}（{title}）测试失败，涉及文件：\n{files}\n请帮我定位失败原因并修复。', 'boundary.title': '面板渲染出错了',
@@ -102,8 +134,11 @@ window.__ModuleLoader__.load({
       'header.scan': '{files} files · {ms} ms', 'header.errors': '{count} errors',
       'header.truncated': 'File list truncated', 'header.revision': 'rev r{revision}',
       'header.writeOff': 'Write channel not connected', 'header.writeOffHint': 'The page did not inject a write token, so the board is read-only and action buttons are disabled.',
+      'header.repoLabel': 'Repository', 'header.repoUninitialized': ' (not initialized)',
+      'header.reposRefresh': 'Refresh repositories',
       'tab.overview': 'Overview', 'tab.pending': 'Pending',
-      'tab.board': 'Board', 'tab.changes': 'Changes',
+      'tab.board': 'Board', 'tab.timeline': 'Timeline',
+      'tab.changes': 'Changes',
       'stats.total': 'Items', 'stats.built': 'Built',
       'stats.tested': 'Tested', 'stats.decision': 'Your decisions',
       'stats.manual': 'Your manual steps', 'stats.failing': 'Tests failing',
@@ -141,7 +176,17 @@ window.__ModuleLoader__.load({
       'change.decision-added': 'Decision added', 'change.decision-cleared': 'Decision cleared',
       'change.manual-added': 'Manual step added', 'change.manual-cleared': 'Manual step cleared',
       'change.test-failed': 'Test failed', 'change.test-fixed': 'Test fixed',
-      'change.unknown': 'Other change', 'state.loading': 'Loading the board…',
+      'change.unknown': 'Other change',
+      'timeline.areaFilter': 'Filter by area', 'timeline.allAreas': 'All areas',
+      'timeline.onlyOpen': 'Open only', 'timeline.today': 'Today',
+      'timeline.yesterday': 'Yesterday', 'timeline.empty': 'No milestones recorded yet',
+      'timeline.emptyHint': 'Each milestone shows up here, grouped by day, as work items advance.',
+      'milestone.label': 'Milestones', 'milestone.created': 'Created',
+      'milestone.started': 'Started', 'milestone.built': 'Built',
+      'milestone.tested': 'Tested', 'milestone.shipped': 'Shipped',
+      'event.started': 'Work started', 'event.decided': 'Decided by you',
+      'event.manualDone': 'Manual step done',
+      'state.loading': 'Loading the board…',
       'state.noSnapshot': 'No board data yet.', 'state.retry': 'Retry',
       'state.offline': 'Cannot reach the host; showing the last data.', 'error.title': 'Request failed',
       'error.dismiss': 'Dismiss', 'error.action': 'Action failed: {message}',
@@ -154,6 +199,7 @@ window.__ModuleLoader__.load({
       'action.decideBusy': 'Recording decision…', 'action.stepBusy': 'Saving step…',
       'action.scanBusy': 'Scanning…', 'action.scanDone': 'Scan complete',
       'action.initDone': 'Board initialized', 'action.decided': 'Recorded: {choice}',
+      'action.repoSwitched': 'Switched to {repo}', 'action.reposRefreshed': 'Repository list refreshed',
       'action.stepSaved': 'Step saved', 'action.doneSaved': 'Marked as done',
       'copy.promptDecision': 'Work item {id} ({title}) needs a decision.\nQuestion: {question}\nOptions: {options}\nImpact: {impact}\nDeadline: {deadline}\nPlease compare the options and recommend one.', 'copy.promptManual': 'Work item {id} ({title}) needs these manual steps from me:\n{steps}\nPlease update the board once they are done.',
       'copy.promptTest': 'Work item {id} ({title}) is failing tests. Files:\n{files}\nPlease find the cause and fix it.', 'boundary.title': 'The panel failed to render',
@@ -219,7 +265,28 @@ window.__ModuleLoader__.load({
 @keyframes gb-spin{to{transform:rotate(360deg)}}
 .gb-fallback{display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:16px;border:1px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-lg,12px);background:var(--dsw-alias-bg-layer-2,transparent)}.gb-fallback-title{margin:0;font-size:14px;line-height:21px;font-weight:600;color:var(--dsw-alias-state-error-primary,var(--dsw-alias-label-primary))}
 .gb-fallback-desc{margin:0;font-size:12px;line-height:19px;color:var(--dsw-alias-label-secondary)}.gb-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-@media (max-width:820px){.gb-root{padding:14px 14px 22px}.gb-area{grid-template-columns:minmax(90px,1fr) minmax(140px,2fr)}.gb-area .gb-area-meta{grid-column:1 / -1}.gb-change{grid-template-columns:80px minmax(0,1fr)}.gb-change .gb-change-kind{display:none}}
+.gb-repo-switch{display:flex;align-items:center;gap:6px;min-width:0;max-width:360px}
+.gb-repo-dir{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary)}
+.gb-select{box-sizing:border-box;max-width:220px;padding:5px 8px;font:inherit;font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary);background:transparent;border:1px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-sm,8px);cursor:pointer}
+.gb-select:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}.gb-select:disabled{opacity:.45;cursor:not-allowed}
+.gb-select:focus-visible{outline:2px solid var(--dsw-alias-label-primary);outline-offset:2px}
+.gb-milestones{display:flex;flex-wrap:wrap;align-items:center;gap:3px 9px;min-width:0;font-size:10px;line-height:14px;color:var(--dsw-alias-label-tertiary)}
+.gb-milestone{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.gb-milestone-dot{display:block;flex:none;width:6px;height:6px;box-sizing:border-box;background:transparent;border:1px solid var(--dsw-alias-border-l3);border-radius:50%}
+.gb-milestone[data-done="true"]{color:var(--dsw-alias-label-secondary)}.gb-milestone[data-done="true"] .gb-milestone-dot{background:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-label-primary)}
+.gb-milestone-label{white-space:nowrap}.gb-milestones .gb-badge{font-size:10px;line-height:14px;padding:0 6px}
+.gb-timeline{display:flex;flex-direction:column;gap:12px;min-width:0}
+.gb-timeline-filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary)}
+.gb-check{display:inline-flex;align-items:center;gap:6px;cursor:pointer}.gb-check input{margin:0;accent-color:var(--dsw-alias-label-primary);cursor:pointer}
+.gb-timeline-group{display:flex;flex-direction:column;gap:0;min-width:0}
+.gb-timeline-day{margin:0;padding:4px 0;font-size:11px;line-height:16px;font-weight:600;color:var(--dsw-alias-label-tertiary);border-bottom:1px solid var(--dsw-alias-border-l1)}
+.gb-timeline-rows{display:flex;flex-direction:column;min-width:0}
+.gb-timeline-row{display:grid;grid-template-columns:58px 104px minmax(0,1fr) minmax(0,160px);align-items:baseline;gap:10px;padding:6px 0;font-size:12px;line-height:18px;border-bottom:1px solid var(--dsw-alias-border-l1)}
+.gb-timeline-row:last-child{border-bottom:0}
+.gb-timeline-time{font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;white-space:nowrap}
+.gb-timeline-kind{display:flex;min-width:0}.gb-timeline-title{min-width:0;color:var(--dsw-alias-label-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gb-timeline-area{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary);text-align:right}
+@media (max-width:820px){.gb-root{padding:14px 14px 22px}.gb-head-actions{flex-wrap:wrap;justify-content:flex-end}.gb-repo-switch{max-width:100%}.gb-repo-dir{max-width:160px}.gb-area{grid-template-columns:minmax(90px,1fr) minmax(140px,2fr)}.gb-area .gb-area-meta{grid-column:1 / -1}.gb-change{grid-template-columns:80px minmax(0,1fr)}.gb-change .gb-change-kind{display:none}.gb-timeline-row{grid-template-columns:52px minmax(0,1fr)}.gb-timeline-kind,.gb-timeline-area{display:none}}
 @media (prefers-reduced-motion:reduce){.gb-spinner{animation-duration:2.4s}.gb-bar-fill{transition:none}}
 `;
     function isObject(value) { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
@@ -265,6 +332,33 @@ window.__ModuleLoader__.load({
       try {
         return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
       } catch (error) { return raw; }
+    }
+    function pad2(value) {
+      const number = Math.floor(Math.abs(asNumber(value, 0)));
+      return number < 10 ? `0${number}` : String(number);
+    }
+    function dateKey(date) {
+      return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+    }
+    function formatClock(date) {
+      return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+    }
+    function formatTimelineStamp(date, now) {
+      if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+      if (dateKey(date) === dateKey(now)) return formatClock(date);
+      return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${formatClock(date)}`;
+    }
+    function formatDayLabel(date, now, tr) {
+      const key = dateKey(date);
+      if (key === dateKey(now)) return tr('timeline.today');
+      const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+      if (key === dateKey(yesterday)) return tr('timeline.yesterday');
+      return key;
+    }
+    function pathLabel(value) {
+      const text = asString(value).replace(/[\\/]+$/, '');
+      const parts = text.split(/[\\/]/).filter((entry) => entry.length > 0);
+      return parts.length > 0 ? parts[parts.length - 1] : text;
     }
     function createStore(initial) {
       let value = initial;
@@ -342,6 +436,12 @@ window.__ModuleLoader__.load({
         missing: asBool(derived.missing), truncated: asBool(derived.truncated),
       };
     }
+    function normalizeMilestones(raw) {
+      const milestones = asObject(raw);
+      const result = {};
+      for (const field of MILESTONE_FIELDS) result[field] = asString(milestones[field]);
+      return result;
+    }
     function normalizeItem(raw, index) {
       const item = asObject(raw);
       const id = asString(item.id).trim();
@@ -356,6 +456,7 @@ window.__ModuleLoader__.load({
         manual: normalizeManual(item.manual), test: { report: asString(asObject(item.test).report) },
         createdAt: asString(item.createdAt), updatedAt: asString(item.updatedAt),
         updatedBy: asString(item.updatedBy), path: asString(item.path), notes: asString(item.notes),
+        milestones: normalizeMilestones(item.milestones),
         errors: asStringList(item.errors), derived: normalizeDerived(item.derived),
       };
     }
@@ -425,6 +526,18 @@ window.__ModuleLoader__.load({
         truncated: asBool(scan.truncated), errors,
       };
     }
+    function normalizeRepo(raw) {
+      const repo = asObject(raw);
+      const root = asString(repo.root);
+      if (!root) return null;
+      return {
+        root,
+        label: asString(repo.label) || pathLabel(root),
+        initialized: asBool(repo.initialized),
+        itemCount: Math.max(0, asNumber(repo.itemCount, 0)),
+        active: asBool(repo.active),
+      };
+    }
     function normalizeSnapshot(raw) {
       if (!isObject(raw) || raw.ok === false) return null;
       const items = asArray(raw.items)
@@ -439,6 +552,8 @@ window.__ModuleLoader__.load({
         counts: normalizeCounts(raw.counts, items),
         areas: areasRaw.length > 0 ? areasRaw.map(normalizeArea) : computeAreas(items),
         items, changes: asArray(raw.changes).map(normalizeChange).slice(0, 50),
+        activeRoot: asString(raw.activeRoot),
+        repos: asArray(raw.repos).map(normalizeRepo).filter(Boolean),
       };
     }
     function sortPendingItems(items) {
@@ -703,6 +818,7 @@ window.__ModuleLoader__.load({
           h('h3', { className: 'gb-card-title' }, item.title || tr('item.untitled')),
           h(GateBadges, { tr, item, showNeutral: false })),
         h(ItemFacts, { tr, item }),
+        h(MilestoneSteps, { tr, item }),
         h('div', { className: 'gb-field' },
           h('span', { className: 'gb-field-label' }, tr('pending.question')),
           h('span', { className: 'gb-field-value' }, item.decision.question || tr('pending.noQuestion'))),
@@ -730,6 +846,7 @@ window.__ModuleLoader__.load({
           h('h3', { className: 'gb-card-title' }, item.title || tr('item.untitled')),
           h(GateBadges, { tr, item, showNeutral: false })),
         h(ItemFacts, { tr, item }),
+        h(MilestoneSteps, { tr, item }),
         h(ManualSteps, { tr, item, busy, writable, onStep, onManualDone }),
         item.manual.estimate ? h('div', { className: 'gb-field' },
           h('span', { className: 'gb-field-label' }, tr('pending.estimate')),
@@ -747,6 +864,7 @@ window.__ModuleLoader__.load({
           h('h3', { className: 'gb-card-title' }, item.title || tr('item.untitled')),
           h(GateBadges, { tr, item, showNeutral: false })),
         h(ItemFacts, { tr, item }),
+        h(MilestoneSteps, { tr, item }),
         h('div', { className: 'gb-field' },
           h('span', { className: 'gb-field-label' }, report ? tr('pending.testLine', { report }) : tr('pending.testFallback')),
           item.derived.testTotal > 0
@@ -756,6 +874,29 @@ window.__ModuleLoader__.load({
         h('div', { className: 'gb-actions' }, h(CopyButton, { tr, onClick: () => onCopy(item, 'test') })),
       );
     }
+    function MilestoneSteps({ tr, item }) {
+      const now = new Date();
+      return h(
+        'div',
+        { className: 'gb-milestones', 'aria-label': tr('milestone.label') },
+        MILESTONE_STEPS.map((step) => {
+          const raw = step.fromItem ? item.createdAt : item.milestones[step.field];
+          const date = raw ? new Date(raw) : null;
+          const done = Boolean(date && !Number.isNaN(date.getTime()));
+          return h(
+            'span',
+            {
+              key: step.id,
+              className: 'gb-milestone',
+              'data-done': done ? 'true' : 'false',
+              title: done ? `${tr(step.key)} · ${formatTimelineStamp(date, now)}` : tr(step.key),
+            },
+            h('span', { className: 'gb-milestone-dot' }),
+            h('span', { className: 'gb-milestone-label' }, tr(step.key)),
+          );
+        }),
+      );
+    }
     function BoardCard({ tr, item }) {
       return h(
         'div',
@@ -763,6 +904,7 @@ window.__ModuleLoader__.load({
         h('div', { className: 'gb-board-title' }, item.title || tr('item.untitled')),
         item.area ? h('div', { className: 'gb-board-area' }, item.area) : null,
         h(GateBadges, { tr, item, showNeutral: false }),
+        h(MilestoneSteps, { tr, item }),
         item.derived.missing ? h('div', { className: 'gb-badges' }, h(Badge, { tone: 'error' }, tr('board.missing'))) : null,
       );
     }
@@ -881,6 +1023,108 @@ window.__ModuleLoader__.load({
         }),
       );
     }
+    function TimelineTab({ tr, snapshot }) {
+      const [area, setArea] = React.useState('');
+      const [onlyOpen, setOnlyOpen] = React.useState(false);
+      const now = new Date();
+      let items = snapshot.items;
+      if (area) items = items.filter((item) => item.area === area);
+      if (onlyOpen) items = items.filter((item) => item.stage !== 'shipped');
+      const events = [];
+      for (const item of items) {
+        for (const spec of TIMELINE_EVENTS) {
+          const raw = spec.fromItem ? item.createdAt : item.milestones[spec.field];
+          const date = raw ? new Date(raw) : null;
+          if (!date || Number.isNaN(date.getTime())) continue;
+          events.push({ key: `${item.id}:${spec.field}`, date, label: spec.key, item });
+        }
+      }
+      events.sort((left, right) => right.date.getTime() - left.date.getTime());
+      const groups = [];
+      let current = null;
+      for (const event of events) {
+        const key = dateKey(event.date);
+        if (!current || current.key !== key) {
+          current = { key, label: formatDayLabel(event.date, now, tr), events: [] };
+          groups.push(current);
+        }
+        current.events.push(event);
+      }
+      const filters = h(
+        'div',
+        { className: 'gb-timeline-filters' },
+        h(
+          'label',
+          { className: 'gb-field gb-field-inline' },
+          h('span', { className: 'gb-field-label' }, tr('timeline.areaFilter')),
+          h(
+            'select',
+            { className: 'gb-select', value: area, onChange: (event) => setArea(event.target.value) },
+            h('option', { value: '' }, tr('timeline.allAreas')),
+            snapshot.areas.map((entry) => h('option', { key: entry.name, value: entry.name }, entry.name)),
+          ),
+        ),
+        h(
+          'label',
+          { className: 'gb-check' },
+          h('input', {
+            type: 'checkbox',
+            checked: onlyOpen,
+            onChange: (event) => setOnlyOpen(event.target.checked),
+          }),
+          h('span', null, tr('timeline.onlyOpen')),
+        ),
+      );
+      if (events.length === 0) {
+        return h(
+          'div',
+          { className: 'gb-body' },
+          filters,
+          h(EmptyState, {
+            tr,
+            icon: h(GameboardIcon, { size: 24 }),
+            title: tr('timeline.empty'),
+            desc: tr('timeline.emptyHint'),
+          }),
+        );
+      }
+      return h(
+        'div',
+        { className: 'gb-body' },
+        filters,
+        h(
+          'div',
+          { className: 'gb-timeline' },
+          groups.map((group) =>
+            h(
+              'section',
+              { className: 'gb-timeline-group', key: group.key },
+              h('div', { className: 'gb-timeline-day' }, group.label),
+              h(
+                'div',
+                { className: 'gb-timeline-rows' },
+                group.events.map((event) =>
+                  h(
+                    'div',
+                    { className: 'gb-timeline-row', key: event.key },
+                    h('span', { className: 'gb-timeline-time' }, formatClock(event.date)),
+                    h('span', { className: 'gb-timeline-kind' }, tr(event.label)),
+                    h(
+                      'span',
+                      { className: 'gb-timeline-title', title: `${event.item.title} · ${formatDate(event.date)}` },
+                      event.item.title || tr('item.untitled'),
+                    ),
+                    event.item.area
+                      ? h('span', { className: 'gb-timeline-area' }, event.item.area)
+                      : null,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     function ChangesTab({ tr, snapshot }) {
       if (snapshot.changes.length === 0) {
         return h(EmptyState, {
@@ -994,7 +1238,7 @@ window.__ModuleLoader__.load({
         area.remove();
       }
     }
-    function PanelHeader({ tr, snapshot, refreshing, busy, writable, onRefresh, onScan }) {
+    function PanelHeader({ tr, snapshot, refreshing, busy, writable, onRefresh, onScan, onSelectRepo, onReposRefresh }) {
       const meta = [];
       if (snapshot) {
         meta.push(
@@ -1022,6 +1266,50 @@ window.__ModuleLoader__.load({
         meta.push(h('span', { className: 'gb-meta-item', key: 'last' }, tr('header.never')));
       }
       const scanning = busy === 'scan';
+      const repos = snapshot && Array.isArray(snapshot.repos) ? snapshot.repos : [];
+      const activeRoot = snapshot && snapshot.activeRoot ? snapshot.activeRoot : '';
+      const repoValue = repos.length > 0
+        ? activeRoot || (repos.find((entry) => entry.active) || {}).root || ''
+        : '';
+      const repoControl = repos.length > 0
+        ? h(
+            'label',
+            { className: 'gb-repo' },
+            h('span', { className: 'gb-repo-label' }, tr('header.repoLabel')),
+            h(
+              'select',
+              {
+                className: 'gb-select',
+                value: repoValue,
+                disabled: !writable || Boolean(busy),
+                title: writable ? undefined : tr('header.writeOff'),
+                onChange: (event) => onSelectRepo(event.target.value),
+              },
+              repos.map((entry) =>
+                h(
+                  'option',
+                  { key: entry.root, value: entry.root },
+                  `${entry.label}${entry.initialized ? '' : tr('header.repoUninitialized')} · ${entry.itemCount}`,
+                ),
+              ),
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'gb-btn gb-btn-sm',
+                disabled: !writable || Boolean(busy),
+                title: tr('header.reposRefresh'),
+                onClick: onReposRefresh,
+              },
+              h(RefreshIcon, { size: 12 }),
+            ),
+          )
+        : h(
+            'span',
+            { className: 'gb-repo-path', title: snapshot && snapshot.board ? snapshot.board.dir : '' },
+            snapshot && snapshot.board ? snapshot.board.dir : '',
+          );
       return h(
         'header',
         { className: 'gb-header' },
@@ -1035,6 +1323,7 @@ window.__ModuleLoader__.load({
         h(
           'div',
           { className: 'gb-head-actions' },
+          repoControl,
           h(
             'button',
             {
@@ -1121,6 +1410,24 @@ window.__ModuleLoader__.load({
         const onInit = () => {
           runAction({ op: 'init' }, { busyKey: 'init', successKey: 'action.initDone' });
         };
+        const onSelectRepo = (root) => {
+          if (!root || !writable || busy) return;
+          const target = (snapshot && Array.isArray(snapshot.repos)
+            ? snapshot.repos.find((entry) => entry.root === root)
+            : null) || null;
+          runAction(
+            { op: 'select-root', root },
+            {
+              busyKey: 'repo',
+              successKey: 'action.repoSwitched',
+              successVars: { repo: target ? target.label : pathLabel(root) },
+            },
+          );
+        };
+        const onReposRefresh = () => {
+          if (!writable || busy) return;
+          runAction({ op: 'repos' }, { busyKey: 'repos', successKey: 'action.reposRefreshed' });
+        };
         let content;
         if (!snapshot) {
           content = state.loading
@@ -1156,6 +1463,8 @@ window.__ModuleLoader__.load({
             tabBody = h(PendingTab, { tr, snapshot, busy, writable, actions });
           } else if (tab === 'board') {
             tabBody = h(BoardTab, { tr, snapshot });
+          } else if (tab === 'timeline') {
+            tabBody = h(TimelineTab, { tr, snapshot });
           } else if (tab === 'changes') {
             tabBody = h(ChangesTab, { tr, snapshot });
           } else {
@@ -1188,6 +1497,8 @@ window.__ModuleLoader__.load({
             writable,
             onRefresh,
             onScan,
+            onSelectRepo,
+            onReposRefresh,
           }),
           writable ? null : h(WriteOffNotice, { tr }),
           state.error ? h(ErrorBanner, { tr, message: errorText(tr, state.error), onDismiss: dismissError }) : null,

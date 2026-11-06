@@ -53,6 +53,7 @@
 | `update` | 改阶段、优先级、标题、证据 glob、待拍板问题 |
 | `note` | 往备注追加一条带时间的记录 |
 | `scan` | 立刻重扫仓库 |
+| `repos` | 列出可切换的仓库；带 `root` 参数则切过去（切错仓库会改到别人的板，先确认） |
 
 **没有工具时**直接编辑 `.gameboard/board/<id>.md`，格式见第四节。
 
@@ -122,6 +123,14 @@ updated_by: workstation-A/ai
 | `created_at` / `updated_at` / `updated_by` | ISO 时间 / `<机器名>/<ai\|user>` | `updated_by` 手工维护时写机器名 |
 
 枚举写错会退回默认值并记一条扫描错误，不会弄挂整块看板，但状态会悄悄不对——改完扫一眼面板。
+
+### 里程碑时间戳（自动，不要手写）
+
+`started_at` / `built_at` / `tested_at` / `shipped_at` / `decided_at` / `manual_done_at` 由插件在状态推进时自动写入，只写第一次、不会后退。它们驱动面板的「时间线」页和卡片上的五步进度条。
+
+- 你只要正常改 `stage` / `test` / `decision` / `manual`，时间戳会跟着生成，**不要手工填写或改写**。
+- 跳过阶段（比如 `spec` 直接到 `shipped`）时，中间里程碑会一起记在本次操作时间上。
+- 手工编辑文件推进状态时，这些字段不会自动补；需要精确时间线就走工具或面板。
 
 ### front matter 规则
 

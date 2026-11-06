@@ -6,10 +6,10 @@
  * panel reads, and the `gameboard` tool the agent uses.
  */
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { hostname } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 
 import {
   PRIORITIES,
@@ -57,6 +57,8 @@ function emptySnapshot(dir) {
     areas: [],
     items: [],
     changes: [],
+    activeRoot: '',
+    repos: [],
   };
 }
 
@@ -143,18 +145,19 @@ export function apply(ctx, config = {}) {
   // board; otherwise each Host process gets a fresh random one injected into the
   // panel page.
   const token = String(settings.token || '').trim() || randomUUID();
-  const repoRootAbs = resolveRoot(ctx, settings);
   const boardRel = String(settings.boardDir || '.gameboard')
     .replace(/\\/g, '/')
     .replace(/\/+$/, '');
-  const boardDirAbs = join(repoRootAbs, boardRel);
+  let activeRoot = resolveRoot(ctx, settings);
+  const boardDir = () => join(activeRoot, boardRel);
   const itemsRel = `${boardRel}/board`;
   const configRel = `${boardRel}/config.json`;
-  // Writes are fenced to the board's repository: the composed filesystem's
+  // Writes are fenced to the active repository: the composed filesystem's
   // default policy points at the profile directory, not at the game repo.
-  const boardPolicy = { mode: 'workspace-write', workspaceRoot: repoRootAbs };
+  const boardPolicy = () => ({ mode: 'workspace-write', workspaceRoot: activeRoot });
 
-  let snapshot = emptySnapshot(boardDirAbs);
+  let snapshot = emptySnapshot(boardDir());
+  snapshot.activeRoot = activeRoot;
   let scanPromise = null;
   let disposed = false;
   let watchTimer = null;
@@ -165,8 +168,102 @@ export function apply(ctx, config = {}) {
     listDir: (target) => ctx.fs.listDir(target),
     readText: (target) => ctx.fs.readText(target),
     writeText: (target, text, expected, signal) =>
-      ctx.fs.writeText(target, text, expected, signal, boardPolicy),
+      ctx.fs.writeText(target, text, expected, signal, boardPolicy()),
   };
+
+  function pathKey(value) {
+    return String(value || '')
+      .replace(/\\/g, '/')
+      .replace(/\/+$/, '')
+      .toLowerCase();
+  }
+
+  /** Every repository the panel may switch to: active, configured, workspaces. */
+  function repoEntries() {
+    const candidates = [];
+    const push = (value) => {
+      if (typeof value === 'string' && value.trim()) candidates.push(value.trim());
+    };
+    push(activeRoot);
+    for (const root of Array.isArray(settings.roots) ? settings.roots : []) push(root);
+    try {
+      const registry = ctx.get('workspaceRegistry');
+      const workspaces = registry && typeof registry.list === 'function' ? registry.list() : [];
+      for (const workspace of workspaces) push(workspace && workspace.path);
+    } catch {
+      // workspaces are an optional convenience
+    }
+    const seen = new Set();
+    return candidates.filter((root) => {
+      const key = pathKey(root);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  async function describeRepo(root) {
+    const entry = {
+      root,
+      label: basename(root) || root,
+      initialized: false,
+      itemCount: 0,
+      active: pathKey(root) === pathKey(activeRoot),
+    };
+    try {
+      const target = await ctx.fs.resolve(join(root, itemsRel));
+      const entries = await ctx.fs.listDir(target);
+      const files = (Array.isArray(entries) ? entries : []).filter(
+        (item) => item && item.type === 'file' && String(item.name).endsWith('.md'),
+      );
+      entry.initialized = true;
+      entry.itemCount = files.length;
+    } catch {
+      // no board in that repository yet
+    }
+    return entry;
+  }
+
+  async function describeRepos() {
+    return Promise.all(repoEntries().map((root) => describeRepo(root)));
+  }
+
+  function persistMachineConfig(patch) {
+    const dir = profileDirectory();
+    if (!dir) return;
+    try {
+      const current = readMachineConfig();
+      const next = { ...current, ...patch };
+      writeFileSync(join(dir, 'gameboard.json'), `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+    } catch (error) {
+      console.warn('[gameboard] could not persist machine config:', error);
+    }
+  }
+
+  async function selectRoot(root) {
+    const next = String(root || '').trim();
+    if (!next) throw new Error('缺少仓库路径');
+    let info;
+    try {
+      const target = await ctx.fs.resolve(next);
+      info = await ctx.fs.stat(target);
+    } catch (error) {
+      throw new Error(`无法访问仓库：${next}（${errorText(error)}）`);
+    }
+    if (!info || info.type !== 'directory') throw new Error(`不是目录：${next}`);
+    const previous = activeRoot;
+    activeRoot = next;
+    settings.roots = [next, ...(Array.isArray(settings.roots) ? settings.roots : [])].filter(
+      (value) => typeof value === 'string' && value.trim(),
+    );
+    persistMachineConfig({ activeRoot: next, roots: settings.roots });
+    snapshot = { ...snapshot, activeRoot: next, board: { ...snapshot.board, dir: boardDir() } };
+    if (pathKey(previous) !== pathKey(next)) {
+      snapshot.items = [];
+      snapshot.changes = [];
+    }
+    return refresh();
+  }
 
   async function runScan() {
     if (disposed) return snapshot;
@@ -176,7 +273,7 @@ export function apply(ctx, config = {}) {
       try {
         const next = await scanBoard({
           fs: adapter,
-          root: repoRootAbs,
+          root: activeRoot,
           config: settings.maxFiles === DEFAULTS.maxFiles ? {} : { maxFiles: settings.maxFiles },
           previous: snapshot,
           now: new Date().toISOString(),
@@ -184,7 +281,9 @@ export function apply(ctx, config = {}) {
         if (disposed) return snapshot;
         next.ok = true;
         next.generatedAt = new Date().toISOString();
-        next.board = { ...next.board, dir: boardDirAbs };
+        next.board = { ...next.board, dir: boardDir() };
+        next.activeRoot = activeRoot;
+        next.repos = await describeRepos();
         next.scan = {
           ...next.scan,
           durationMs: Date.now() - startedAt,
@@ -197,13 +296,14 @@ export function apply(ctx, config = {}) {
         console.warn('[gameboard] scan failed:', error);
         snapshot = {
           ...snapshot,
+          activeRoot,
           generatedAt: new Date().toISOString(),
           scan: {
             ...(snapshot.scan || { durationMs: 0, files: 0, truncated: false, errors: [] }),
             durationMs: Date.now() - startedAt,
             errors: [
               ...((snapshot.scan && snapshot.scan.errors) || []),
-              { path: boardDirAbs, message: lastError },
+              { path: boardDir(), message: lastError },
             ].slice(-20),
           },
         };
@@ -232,7 +332,7 @@ export function apply(ctx, config = {}) {
   // ---- board file IO -------------------------------------------------------
 
   async function ensureDir(relDir) {
-    const abs = join(repoRootAbs, relDir);
+    const abs = join(activeRoot, relDir);
     try {
       await mkdir(abs, { recursive: true });
     } catch (error) {
@@ -244,7 +344,7 @@ export function apply(ctx, config = {}) {
   async function readItemFile(id) {
     const item = snapshot.items.find((entry) => entry.id === id);
     if (!item) throw new Error(`未知工作项：${id}`);
-    const target = await ctx.fs.resolve(item.path, { cwd: repoRootAbs });
+    const target = await ctx.fs.resolve(item.path, { cwd: activeRoot });
     const text = await ctx.fs.readText(target);
     const doc = parseBoardDoc(text);
     return { item, doc, text };
@@ -253,8 +353,26 @@ export function apply(ctx, config = {}) {
   async function writeItem(item) {
     if (!item.path) item.path = `${itemsRel}/${item.id}.md`;
     await ensureDir(dirname(item.path.replace(/\\/g, '/')));
-    const target = await ctx.fs.resolve(item.path, { cwd: repoRootAbs });
-    await ctx.fs.writeText(target, serializeItem(item), undefined, undefined, boardPolicy);
+    const target = await ctx.fs.resolve(item.path, { cwd: activeRoot });
+    await ctx.fs.writeText(target, serializeItem(item), undefined, undefined, boardPolicy());
+  }
+
+  const STAGE_SEQUENCE = ['idea', 'spec', 'building', 'built', 'tested', 'shipped'];
+
+  /** Record a milestone once; later writes must not move it backwards. */
+  function stampMilestone(item, key, at) {
+    if (!item.milestones || typeof item.milestones !== 'object') item.milestones = {};
+    if (!item.milestones[key]) item.milestones[key] = at;
+  }
+
+  function stampStageProgress(item, previousStage, at) {
+    const from = STAGE_SEQUENCE.indexOf(previousStage);
+    const to = STAGE_SEQUENCE.indexOf(item.stage);
+    if (to <= from) return;
+    if (to >= STAGE_SEQUENCE.indexOf('building')) stampMilestone(item, 'startedAt', at);
+    if (to >= STAGE_SEQUENCE.indexOf('built')) stampMilestone(item, 'builtAt', at);
+    if (to >= STAGE_SEQUENCE.indexOf('tested')) stampMilestone(item, 'testedAt', at);
+    if (to >= STAGE_SEQUENCE.indexOf('shipped')) stampMilestone(item, 'shippedAt', at);
   }
 
   async function mutateItem(id, change, options = {}) {
@@ -263,8 +381,25 @@ export function apply(ctx, config = {}) {
       { meta: { ...doc.meta }, body: doc.body },
       { id: item.id, path: item.path, now: new Date().toISOString() },
     );
+    const before = {
+      stage: next.stage,
+      test: next.gates.test,
+      decision: next.gates.decision,
+      manual: next.gates.manual,
+    };
+    const nowIso = new Date().toISOString();
     const result = change(next, options) || next;
-    result.updatedAt = new Date().toISOString();
+    stampStageProgress(result, before.stage, nowIso);
+    if (before.test !== 'passing' && result.gates.test === 'passing') {
+      stampMilestone(result, 'testedAt', nowIso);
+    }
+    if (before.decision !== 'decided' && result.gates.decision === 'decided') {
+      stampMilestone(result, 'decidedAt', nowIso);
+    }
+    if (before.manual !== 'done' && result.gates.manual === 'done') {
+      stampMilestone(result, 'manualDoneAt', nowIso);
+    }
+    result.updatedAt = nowIso;
     result.updatedBy = options.by || `${machine}/user`;
     await writeItem(result);
     return refresh();
@@ -308,7 +443,7 @@ export function apply(ctx, config = {}) {
 
   async function initBoard() {
     await ensureDir(itemsRel);
-    const configTarget = await ctx.fs.resolve(configRel, { cwd: repoRootAbs });
+    const configTarget = await ctx.fs.resolve(configRel, { cwd: activeRoot });
     const info = await ctx.fs.stat(configTarget);
     if (!info) {
       const skeleton = {
@@ -322,7 +457,7 @@ export function apply(ctx, config = {}) {
           `${JSON.stringify(skeleton, null, 2)}\n`,
           { kind: 'createIfAbsent' },
           undefined,
-          boardPolicy,
+          boardPolicy(),
         )
         .catch(() => {});
     }
@@ -400,6 +535,13 @@ export function apply(ctx, config = {}) {
         return initBoard();
       case 'scan':
         return refresh();
+      case 'repos':
+        return refresh();
+      case 'select-root': {
+        const next = await selectRoot(body.root);
+        startWatch().catch((error) => console.warn('[gameboard] watch failed:', error));
+        return next;
+      }
       case 'decide': {
         const id = String(body.id || '');
         const choice = String(body.choice || '').trim();
@@ -515,6 +657,18 @@ export function apply(ctx, config = {}) {
 
   async function runTool(args) {
     const action = String(args.action || 'summary');
+    if (action === 'repos') {
+      if (args.root) {
+        const next = await selectRoot(args.root);
+        startWatch().catch((error) => console.warn('[gameboard] watch failed:', error));
+        return {
+          activeRoot: next.activeRoot,
+          counts: next.counts,
+          repos: next.repos,
+        };
+      }
+      return { activeRoot, repos: await describeRepos() };
+    }
     if (action === 'scan') {
       const next = await refresh();
       return { counts: next.counts, scannedAt: next.generatedAt };
@@ -631,10 +785,11 @@ export function apply(ctx, config = {}) {
           properties: {
             action: {
               type: 'string',
-              enum: ['summary', 'list', 'get', 'add', 'update', 'note', 'scan'],
+              enum: ['summary', 'list', 'get', 'add', 'update', 'note', 'scan', 'repos'],
               description:
-                'summary=总览与摘要；list=按条件列工作项；get=单个工作项详情；add=新增工作项；update=改阶段/优先级/测试/待拍板问题；note=追加备注；scan=立即重新扫描仓库。',
+                'summary=总览与摘要；list=按条件列工作项；get=单个工作项详情；add=新增工作项；update=改阶段/优先级/测试/待拍板问题；note=追加备注；scan=立即重新扫描仓库；repos=列出可切换的仓库（带 root 参数则切换）。',
             },
+            root: { type: 'string', description: 'repos 动作要切换到的仓库绝对路径' },
             id: { type: 'string', description: '工作项 id（get/update/note 必填）' },
             area: { type: 'string', description: '模块/领域名称' },
             gate: {
@@ -739,35 +894,48 @@ export function apply(ctx, config = {}) {
     return () => disposeInterval();
   }, 'gameboard: scan interval');
 
-  if (settings.watch) {
-    ctx.effect(() => {
-      const controller = new AbortController();
-      let close = null;
-      let stopped = false;
-      (async () => {
-        try {
-          const target = await ctx.fs.resolve(boardDirAbs);
-          const watcher = await ctx.fs.watch(target, () => scheduleScan(400), controller.signal);
-          if (stopped) {
-            await watcher();
-            return;
-          }
-          close = watcher;
-        } catch (error) {
-          console.warn('[gameboard] watch unavailable:', error);
-        }
-      })();
-      return () => {
-        stopped = true;
-        controller.abort();
-        if (close) close().catch(() => {});
-        if (watchTimer !== null) {
-          clearTimeout(watchTimer);
-          watchTimer = null;
-        }
-      };
-    }, 'gameboard: watch board dir');
+  let watchController = null;
+  let closeWatch = null;
+
+  async function stopWatch() {
+    if (watchController) watchController.abort();
+    watchController = null;
+    if (closeWatch) {
+      const close = closeWatch;
+      closeWatch = null;
+      await close().catch(() => {});
+    }
   }
+
+  /** Re-bind the directory watcher; switching repositories moves the target. */
+  async function startWatch() {
+    await stopWatch();
+    if (!settings.watch) return;
+    const controller = new AbortController();
+    try {
+      const target = await ctx.fs.resolve(boardDir());
+      const watcher = await ctx.fs.watch(target, () => scheduleScan(400), controller.signal);
+      if (controller.signal.aborted) {
+        await watcher();
+        return;
+      }
+      watchController = controller;
+      closeWatch = watcher;
+    } catch (error) {
+      console.warn('[gameboard] watch unavailable:', error);
+    }
+  }
+
+  ctx.effect(() => {
+    startWatch().catch((error) => console.warn('[gameboard] watch failed:', error));
+    return () => {
+      stopWatch().catch(() => {});
+      if (watchTimer !== null) {
+        clearTimeout(watchTimer);
+        watchTimer = null;
+      }
+    };
+  }, 'gameboard: watch board dir');
 
   ctx.effect(() => {
     scheduleScan(50);

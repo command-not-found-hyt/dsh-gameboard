@@ -25,8 +25,10 @@
 ```
 
 - **Host 半**：定时扫描仓库（默认 60 秒）+ 监听 `.gameboard/` 变化；解析工作项和测试报告，生成快照。
-- **Web 面板**：侧边栏「项目看板」→ 概览 / 待处理 / 看板 / 变更。
-- **AI 工具 `gameboard`**：`summary` `list` `get` `add` `update` `note` `scan`，让智能体自己维护看板。
+- **多仓库**：面板顶部可以直接切换仓库；候选包括当前仓库、配置里的 `roots`，以及 DSH 已打开的工作区。
+- **Web 面板**：侧边栏「项目看板」→ 概览 / 待处理 / 看板 / 时间线 / 变更。
+- **时间线**：每个工作项自动记录创建 / 开始 / 开发完成 / 测试通过 / 发布 / 拍板 / 手动完成的时间点，可按领域筛选、按天浏览。
+- **AI 工具 `gameboard`**：`summary` `list` `get` `add` `update` `note` `scan` `repos`，让智能体自己维护看板、切换仓库。
 - **规则模板**：[`AGENTS.template.md`](AGENTS.template.md)，复制到项目根目录，任何智能体开工前读它就知道怎么维护。
 
 ## 安装
@@ -68,6 +70,27 @@ mkdir -p .gameboard/board
    ```
 
 优先级：插件行 `config` > `GAMEBOARD_ROOT` 环境变量 > `gameboard.json` > 当前工作区 > 进程目录。
+
+### 切换仓库
+
+面板标题栏的「仓库」下拉框列出所有可切换的仓库，选项后面是工作项数量；未初始化 `.gameboard` 的仓库会标出来，切过去可以直接点「初始化看板」。切换结果会写进 `gameboard.json`（`activeRoot`），重开面板或重启 DSH 都保持。
+
+候选来源（自动合并去重）：
+
+1. 当前激活的仓库；
+2. `roots` 配置（插件行 `config.roots` 或 `gameboard.json` 的 `roots` 数组）；
+3. DSH 已打开的所有工作区。
+
+想让某个仓库固定出现在下拉框里，把它加进 `roots`：
+
+```json
+{
+  "activeRoot": "D:\\MyGame",
+  "roots": ["D:\\MyGame", "D:\\AnotherGame"]
+}
+```
+
+智能体也能切换：`gameboard` 工具 `{"action":"repos"}` 列仓库，`{"action":"repos","root":"D:\\MyGame"}` 切换。
 
 ## 工作项格式
 
@@ -126,6 +149,7 @@ updated_by: workstation-A/ai
 | `match` | glob 数组 | 证据文件，相对仓库根；声明了却匹配不到会标「缺失」 |
 | `tags` / `links` | 数组 | 标签、链接 |
 | `updated_by` | `<机器名>/<ai\|user>` | 最后写入来源，用于多机排查 |
+| `started_at` `built_at` `tested_at` `shipped_at` `decided_at` `manual_done_at` | ISO 时间 | 里程碑，插件在状态推进时自动写入，只写一次、不后退 |
 
 front matter 是逐行 `key: value` 的简化 YAML：数组写在一行，标量不做类型转换，未知 key 会保留不报错。
 
@@ -154,9 +178,12 @@ front matter 是逐行 `key: value` 的简化 YAML：数组写在一行，标量
 
 ## 面板
 
+标题栏右侧是仓库下拉框（显示工作项数量，未初始化的会标出来），旁边是「刷新仓库列表」和「立即扫描」。
+
 - **概览**：四张卡（已完成开发 / 已测通过 / 待你拍板 / 待你手动）+ 测试失败、缺失文件、按 area 的进度条。
 - **待处理**：按「待拍板 > 待手动 > 测试失败」排序，拍板项可直接点选项记录，手动项可勾步骤。
 - **看板**：按 `stage` 分列。
+- **时间线**：所有工作项的里程碑按天倒序排列，可按领域筛选、可只看未完成；卡片上也有一条五步进度条（创建 → 开始 → 开发完成 → 测试通过 → 发布），悬停看时间。
 - **变更**：最近的新增、状态变化、测试失败/修复。
 
 写操作需要页面里的写入令牌（Host 自动注入）。要在脚本里调用就固定插件配置里的 `token`：
@@ -168,7 +195,7 @@ curl -X POST http://127.0.0.1:<port>/gameboard/action \
   -d '{"op":"scan"}'
 ```
 
-接口：`GET /gameboard/snapshot` 返回完整快照；`POST /gameboard/action` 支持 `init` `scan` `add` `set` `decide` `manual-step` `manual-set`。
+接口：`GET /gameboard/snapshot` 返回完整快照；`POST /gameboard/action` 支持 `init` `scan` `add` `set` `decide` `manual-step` `manual-set` `repos` `select-root`。
 
 ## 给智能体的规则
 
