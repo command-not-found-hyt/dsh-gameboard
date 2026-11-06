@@ -1,6 +1,6 @@
 {
   "name": "dsh-gameboard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "license": "MIT",
   "description": "Project status board for DSH: which game-dev work is built, which is tested, which needs a human decision, and which needs a manual step.",
