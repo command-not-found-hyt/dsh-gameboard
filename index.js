@@ -22,6 +22,7 @@ import {
   slugId,
   summarize,
 } from './lib/board.js';
+import { attachGit, readGitLog } from './lib/git.js';
 import { scanBoard } from './lib/scan.js';
 
 export const inject = ['fs', 'tools', 'timer'];
@@ -34,6 +35,8 @@ const DEFAULTS = {
   promptDigest: true,
   maxFiles: 20000,
   machine: '',
+  git: true,
+  gitBin: 'git',
 };
 
 const TOOL_AREA_LIMIT = 40;
@@ -59,6 +62,7 @@ function emptySnapshot(dir) {
     changes: [],
     activeRoot: '',
     repos: [],
+    git: { available: false, commits: 0 },
   };
 }
 
@@ -284,6 +288,19 @@ export function apply(ctx, config = {}) {
         next.board = { ...next.board, dir: boardDir() };
         next.activeRoot = activeRoot;
         next.repos = await describeRepos();
+        // Git is optional: one log read per scan, attached per work item.
+        let gitInfo = { available: false, commits: 0 };
+        if (settings.git !== false) {
+          const commits = await readGitLog({
+            root: activeRoot,
+            gitBin: settings.gitBin || 'git',
+          });
+          if (commits) {
+            for (const item of next.items) attachGit(item, commits);
+            gitInfo = { available: true, commits: commits.length };
+          }
+        }
+        next.git = gitInfo;
         next.scan = {
           ...next.scan,
           durationMs: Date.now() - startedAt,

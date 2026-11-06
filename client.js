@@ -39,13 +39,13 @@ window.__ModuleLoader__.load({
       { id: 'shipped', field: 'shippedAt', key: 'milestone.shipped' },
     ];
     const TIMELINE_EVENTS = [
-      { field: 'createdAt', key: 'milestone.created', fromItem: true },
-      { field: 'startedAt', key: 'event.started' },
-      { field: 'builtAt', key: 'milestone.built' },
-      { field: 'testedAt', key: 'milestone.tested' },
-      { field: 'shippedAt', key: 'milestone.shipped' },
-      { field: 'decidedAt', key: 'event.decided' },
-      { field: 'manualDoneAt', key: 'event.manualDone' },
+      { field: 'createdAt', key: 'milestone.created', fromItem: true, group: 'progress' },
+      { field: 'startedAt', key: 'event.started', group: 'progress', commit: 'started' },
+      { field: 'builtAt', key: 'milestone.built', group: 'progress', commit: 'built' },
+      { field: 'testedAt', key: 'milestone.tested', group: 'test', commit: 'tested' },
+      { field: 'shippedAt', key: 'milestone.shipped', group: 'progress', commit: 'shipped' },
+      { field: 'decidedAt', key: 'event.decided', group: 'decision', commit: 'decided' },
+      { field: 'manualDoneAt', key: 'event.manualDone', group: 'decision', commit: 'manualDone' },
     ];
     const zh = {
       'nav.label': '项目状态板', 'panel.kicker': 'Gameboard',
@@ -107,6 +107,16 @@ window.__ModuleLoader__.load({
       'milestone.tested': '测试通过', 'milestone.shipped': '发布',
       'event.started': '开始执行', 'event.decided': '用户已拍板',
       'event.manualDone': '手动项完成',
+      'timeline.kind': '事件类型', 'timeline.kindAll': '全部事件',
+      'timeline.kindProgress': '进度节点', 'timeline.kindTest': '测试',
+      'timeline.kindDecision': '拍板与手动', 'timeline.kindCommit': '看板提交',
+      'timeline.includeCommits': '含看板提交', 'event.commit': '看板提交',
+      'timeline.range': '时间范围', 'timeline.range7': '最近 7 天',
+      'timeline.range30': '最近 30 天', 'timeline.rangeAll': '全部时间',
+      'timeline.summary': '{events} 个事件 · 平均周期 {lead} · 停滞 {stalled}',
+      'timeline.leadEmpty': '暂无完成项', 'timeline.stalled': '停滞 {days} 天',
+      'duration.minutes': '{count} 分钟', 'duration.hours': '{count} 小时',
+      'duration.days': '{count} 天',
       'state.loading': '正在读取状态板…',
       'state.noSnapshot': '还没有拿到状态板数据。', 'state.retry': '重试',
       'state.offline': '无法连接 Host，显示的是上次数据。', 'error.title': '请求失败',
@@ -186,6 +196,16 @@ window.__ModuleLoader__.load({
       'milestone.tested': 'Tested', 'milestone.shipped': 'Shipped',
       'event.started': 'Work started', 'event.decided': 'Decided by you',
       'event.manualDone': 'Manual step done',
+      'timeline.kind': 'Event type', 'timeline.kindAll': 'All events',
+      'timeline.kindProgress': 'Progress', 'timeline.kindTest': 'Tests',
+      'timeline.kindDecision': 'Decisions', 'timeline.kindCommit': 'Board commits',
+      'timeline.includeCommits': 'Include commits', 'event.commit': 'Board commit',
+      'timeline.range': 'Range', 'timeline.range7': 'Last 7 days',
+      'timeline.range30': 'Last 30 days', 'timeline.rangeAll': 'All time',
+      'timeline.summary': '{events} events · avg cycle {lead} · stalled {stalled}',
+      'timeline.leadEmpty': 'nothing completed yet', 'timeline.stalled': 'stalled {days}d',
+      'duration.minutes': '{count} min', 'duration.hours': '{count} h',
+      'duration.days': '{count} d',
       'state.loading': 'Loading the board…',
       'state.noSnapshot': 'No board data yet.', 'state.retry': 'Retry',
       'state.offline': 'Cannot reach the host; showing the last data.', 'error.title': 'Request failed',
@@ -281,12 +301,14 @@ window.__ModuleLoader__.load({
 .gb-timeline-group{display:flex;flex-direction:column;gap:0;min-width:0}
 .gb-timeline-day{margin:0;padding:4px 0;font-size:11px;line-height:16px;font-weight:600;color:var(--dsw-alias-label-tertiary);border-bottom:1px solid var(--dsw-alias-border-l1)}
 .gb-timeline-rows{display:flex;flex-direction:column;min-width:0}
-.gb-timeline-row{display:grid;grid-template-columns:58px 104px minmax(0,1fr) minmax(0,160px);align-items:baseline;gap:10px;padding:6px 0;font-size:12px;line-height:18px;border-bottom:1px solid var(--dsw-alias-border-l1)}
+.gb-timeline-row{display:grid;grid-template-columns:58px 104px minmax(0,1fr) 84px minmax(0,150px);align-items:baseline;gap:10px;padding:6px 0;font-size:12px;line-height:18px;border-bottom:1px solid var(--dsw-alias-border-l1)}
 .gb-timeline-row:last-child{border-bottom:0}
 .gb-timeline-time{font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums;white-space:nowrap}
 .gb-timeline-kind{display:flex;min-width:0}.gb-timeline-title{min-width:0;color:var(--dsw-alias-label-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gb-timeline-commit{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;line-height:16px;color:var(--dsw-alias-label-tertiary)}
+.gb-timeline-summary{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary)}
 .gb-timeline-area{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary);text-align:right}
-@media (max-width:820px){.gb-root{padding:14px 14px 22px}.gb-head-actions{flex-wrap:wrap;justify-content:flex-end}.gb-repo-switch{max-width:100%}.gb-repo-dir{max-width:160px}.gb-area{grid-template-columns:minmax(90px,1fr) minmax(140px,2fr)}.gb-area .gb-area-meta{grid-column:1 / -1}.gb-change{grid-template-columns:80px minmax(0,1fr)}.gb-change .gb-change-kind{display:none}.gb-timeline-row{grid-template-columns:52px minmax(0,1fr)}.gb-timeline-kind,.gb-timeline-area{display:none}}
+@media (max-width:820px){.gb-root{padding:14px 14px 22px}.gb-head-actions{flex-wrap:wrap;justify-content:flex-end}.gb-repo-switch{max-width:100%}.gb-repo-dir{max-width:160px}.gb-area{grid-template-columns:minmax(90px,1fr) minmax(140px,2fr)}.gb-area .gb-area-meta{grid-column:1 / -1}.gb-change{grid-template-columns:80px minmax(0,1fr)}.gb-change .gb-change-kind{display:none}.gb-timeline-row{grid-template-columns:52px minmax(0,1fr)}.gb-timeline-kind,.gb-timeline-commit,.gb-timeline-area{display:none}}
 @media (prefers-reduced-motion:reduce){.gb-spinner{animation-duration:2.4s}.gb-bar-fill{transition:none}}
 `;
     function isObject(value) { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
@@ -347,6 +369,14 @@ window.__ModuleLoader__.load({
       if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
       if (dateKey(date) === dateKey(now)) return formatClock(date);
       return `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${formatClock(date)}`;
+    }
+    function formatDuration(ms, tr) {
+      if (!Number.isFinite(ms) || ms <= 0) return '';
+      const minutes = Math.max(1, Math.round(ms / 60000));
+      if (minutes < 60) return tr('duration.minutes', { count: minutes });
+      const hours = Math.round(minutes / 60);
+      if (hours < 24) return tr('duration.hours', { count: hours });
+      return tr('duration.days', { count: Math.round(hours / 24) });
     }
     function formatDayLabel(date, now, tr) {
       const key = dateKey(date);
@@ -442,6 +472,32 @@ window.__ModuleLoader__.load({
       for (const field of MILESTONE_FIELDS) result[field] = asString(milestones[field]);
       return result;
     }
+    function normalizeGitCommit(raw) {
+      const commit = asObject(raw);
+      const hash = asString(commit.hash).trim();
+      if (!hash) return null;
+      return { hash, at: asString(commit.at), subject: asString(commit.subject) };
+    }
+    function normalizeGit(raw) {
+      const git = asObject(raw);
+      const commits = asArray(git.commits).map(normalizeGitCommit).filter(Boolean);
+      const source = asObject(git.milestoneCommits);
+      const milestoneCommits = {};
+      for (const key of Object.keys(source)) {
+        const commit = normalizeGitCommit(source[key]);
+        if (commit) milestoneCommits[key] = commit;
+      }
+      return {
+        commits,
+        milestoneCommits,
+        lastCommitAt: asString(git.lastCommitAt),
+        dirty: asBool(git.dirty),
+      };
+    }
+    function normalizeGitInfo(raw) {
+      const git = asObject(raw);
+      return { available: asBool(git.available), commits: Math.max(0, asNumber(git.commits, 0)) };
+    }
     function normalizeItem(raw, index) {
       const item = asObject(raw);
       const id = asString(item.id).trim();
@@ -457,6 +513,7 @@ window.__ModuleLoader__.load({
         createdAt: asString(item.createdAt), updatedAt: asString(item.updatedAt),
         updatedBy: asString(item.updatedBy), path: asString(item.path), notes: asString(item.notes),
         milestones: normalizeMilestones(item.milestones),
+        git: normalizeGit(item.git),
         errors: asStringList(item.errors), derived: normalizeDerived(item.derived),
       };
     }
@@ -554,6 +611,7 @@ window.__ModuleLoader__.load({
         items, changes: asArray(raw.changes).map(normalizeChange).slice(0, 50),
         activeRoot: asString(raw.activeRoot),
         repos: asArray(raw.repos).map(normalizeRepo).filter(Boolean),
+        git: normalizeGitInfo(raw.git),
       };
     }
     function sortPendingItems(items) {
@@ -876,25 +934,59 @@ window.__ModuleLoader__.load({
     }
     function MilestoneSteps({ tr, item }) {
       const now = new Date();
+      let previous = null;
+      const steps = MILESTONE_STEPS.map((step) => {
+        const raw = step.fromItem ? item.createdAt : item.milestones[step.field];
+        const date = raw ? new Date(raw) : null;
+        const done = Boolean(date && !Number.isNaN(date.getTime()));
+        let gap = '';
+        if (done) {
+          if (previous) gap = formatDuration(date.getTime() - previous.getTime(), tr);
+          previous = date;
+        }
+        const detail = done
+          ? [
+              tr(step.key),
+              formatTimelineStamp(date, now),
+              gap ? `+${gap}` : '',
+            ].filter(Boolean).join(' · ')
+          : tr(step.key);
+        return h(
+          'span',
+          {
+            key: step.id,
+            className: 'gb-milestone',
+            'data-done': done ? 'true' : 'false',
+            title: detail,
+          },
+          h('span', { className: 'gb-milestone-dot' }),
+          h('span', { className: 'gb-milestone-label' }, tr(step.key)),
+        );
+      });
+      const stalledDays = (() => {
+        if (item.stage === 'shipped') return 0;
+        const at = Date.parse(item.updatedAt);
+        if (!Number.isFinite(at)) return 0;
+        const days = Math.floor((now.getTime() - at) / 86400000);
+        return days >= 7 ? days : 0;
+      })();
+      if (stalledDays > 0) {
+        steps.push(
+          h(
+            'span',
+            {
+              key: 'stalled',
+              className: 'gb-badge gb-badge-warn',
+              title: tr('timeline.stalled', { days: stalledDays }),
+            },
+            tr('timeline.stalled', { days: stalledDays }),
+          ),
+        );
+      }
       return h(
         'div',
         { className: 'gb-milestones', 'aria-label': tr('milestone.label') },
-        MILESTONE_STEPS.map((step) => {
-          const raw = step.fromItem ? item.createdAt : item.milestones[step.field];
-          const date = raw ? new Date(raw) : null;
-          const done = Boolean(date && !Number.isNaN(date.getTime()));
-          return h(
-            'span',
-            {
-              key: step.id,
-              className: 'gb-milestone',
-              'data-done': done ? 'true' : 'false',
-              title: done ? `${tr(step.key)} · ${formatTimelineStamp(date, now)}` : tr(step.key),
-            },
-            h('span', { className: 'gb-milestone-dot' }),
-            h('span', { className: 'gb-milestone-label' }, tr(step.key)),
-          );
-        }),
+        steps,
       );
     }
     function BoardCard({ tr, item }) {
@@ -1025,18 +1117,51 @@ window.__ModuleLoader__.load({
     }
     function TimelineTab({ tr, snapshot }) {
       const [area, setArea] = React.useState('');
+      const [kind, setKind] = React.useState('all');
+      const [range, setRange] = React.useState('all');
       const [onlyOpen, setOnlyOpen] = React.useState(false);
+      const [includeCommits, setIncludeCommits] = React.useState(true);
       const now = new Date();
+      const rangeDays = range === 'all' ? 0 : Number(range);
+      const cutoff = rangeDays > 0 ? now.getTime() - rangeDays * 86400000 : 0;
+      const gitAvailable = Boolean(snapshot.git && snapshot.git.available);
       let items = snapshot.items;
       if (area) items = items.filter((item) => item.area === area);
       if (onlyOpen) items = items.filter((item) => item.stage !== 'shipped');
       const events = [];
       for (const item of items) {
         for (const spec of TIMELINE_EVENTS) {
+          if (kind !== 'all' && kind !== 'commit' && spec.group !== kind) continue;
+          if (kind === 'commit') continue;
           const raw = spec.fromItem ? item.createdAt : item.milestones[spec.field];
           const date = raw ? new Date(raw) : null;
           if (!date || Number.isNaN(date.getTime())) continue;
-          events.push({ key: `${item.id}:${spec.field}`, date, label: spec.key, item });
+          if (cutoff > 0 && date.getTime() < cutoff) continue;
+          events.push({
+            key: `${item.id}:${spec.field}`,
+            date,
+            label: spec.key,
+            commit: spec.commit ? item.git.milestoneCommits[spec.commit] : null,
+            item,
+          });
+        }
+        const wantsCommits =
+          gitAvailable && item.git.commits.length > 0 && (kind === 'commit' || (kind === 'all' && includeCommits));
+        if (!wantsCommits) continue;
+        const attributed = new Set(Object.values(item.git.milestoneCommits).map((entry) => entry.hash));
+        for (const commit of item.git.commits) {
+          if (attributed.has(commit.hash)) continue;
+          const date = commit.at ? new Date(commit.at) : null;
+          if (!date || Number.isNaN(date.getTime())) continue;
+          if (cutoff > 0 && date.getTime() < cutoff) continue;
+          events.push({
+            key: `${item.id}:commit:${commit.hash}`,
+            date,
+            label: 'event.commit',
+            commit,
+            item,
+            isCommit: true,
+          });
         }
       }
       events.sort((left, right) => right.date.getTime() - left.date.getTime());
@@ -1050,6 +1175,21 @@ window.__ModuleLoader__.load({
         }
         current.events.push(event);
       }
+      const leadTimes = snapshot.items
+        .map((item) => {
+          const start = Date.parse(item.createdAt);
+          const end = Date.parse(item.milestones.shippedAt);
+          return Number.isFinite(start) && Number.isFinite(end) && end >= start ? end - start : null;
+        })
+        .filter((value) => value !== null);
+      const averageLead = leadTimes.length
+        ? formatDuration(leadTimes.reduce((sum, value) => sum + value, 0) / leadTimes.length, tr)
+        : tr('timeline.leadEmpty');
+      const stalledCount = snapshot.items.filter((item) => {
+        if (item.stage === 'shipped') return false;
+        const at = Date.parse(item.updatedAt);
+        return Number.isFinite(at) && now.getTime() - at > 7 * 86400000;
+      }).length;
       const filters = h(
         'div',
         { className: 'gb-timeline-filters' },
@@ -1066,6 +1206,32 @@ window.__ModuleLoader__.load({
         ),
         h(
           'label',
+          { className: 'gb-field gb-field-inline' },
+          h('span', { className: 'gb-field-label' }, tr('timeline.kind')),
+          h(
+            'select',
+            { className: 'gb-select', value: kind, onChange: (event) => setKind(event.target.value) },
+            h('option', { value: 'all' }, tr('timeline.kindAll')),
+            h('option', { value: 'progress' }, tr('timeline.kindProgress')),
+            h('option', { value: 'test' }, tr('timeline.kindTest')),
+            h('option', { value: 'decision' }, tr('timeline.kindDecision')),
+            h('option', { value: 'commit' }, tr('timeline.kindCommit')),
+          ),
+        ),
+        h(
+          'label',
+          { className: 'gb-field gb-field-inline' },
+          h('span', { className: 'gb-field-label' }, tr('timeline.range')),
+          h(
+            'select',
+            { className: 'gb-select', value: range, onChange: (event) => setRange(event.target.value) },
+            h('option', { value: '7' }, tr('timeline.range7')),
+            h('option', { value: '30' }, tr('timeline.range30')),
+            h('option', { value: 'all' }, tr('timeline.rangeAll')),
+          ),
+        ),
+        h(
+          'label',
           { className: 'gb-check' },
           h('input', {
             type: 'checkbox',
@@ -1074,12 +1240,38 @@ window.__ModuleLoader__.load({
           }),
           h('span', null, tr('timeline.onlyOpen')),
         ),
+        gitAvailable
+          ? h(
+              'label',
+              { className: 'gb-check' },
+              h('input', {
+                type: 'checkbox',
+                checked: includeCommits,
+                disabled: kind === 'commit',
+                onChange: (event) => setIncludeCommits(event.target.checked),
+              }),
+              h('span', null, tr('timeline.includeCommits')),
+            )
+          : null,
+      );
+      const summary = h(
+        'div',
+        { className: 'gb-timeline-summary' },
+        h('span', null, tr('timeline.summary', {
+          events: events.length,
+          lead: averageLead,
+          stalled: stalledCount,
+        })),
+        snapshot.git && snapshot.git.available
+          ? h('span', null, `git · ${snapshot.git.commits}`)
+          : null,
       );
       if (events.length === 0) {
         return h(
           'div',
           { className: 'gb-body' },
           filters,
+          summary,
           h(EmptyState, {
             tr,
             icon: h(GameboardIcon, { size: 24 }),
@@ -1092,6 +1284,7 @@ window.__ModuleLoader__.load({
         'div',
         { className: 'gb-body' },
         filters,
+        summary,
         h(
           'div',
           { className: 'gb-timeline' },
@@ -1111,8 +1304,21 @@ window.__ModuleLoader__.load({
                     h('span', { className: 'gb-timeline-kind' }, tr(event.label)),
                     h(
                       'span',
-                      { className: 'gb-timeline-title', title: `${event.item.title} · ${formatDate(event.date)}` },
+                      {
+                        className: 'gb-timeline-title',
+                        title: event.isCommit && event.commit
+                          ? `${event.commit.subject} · ${formatDate(event.date)}`
+                          : `${event.item.title} · ${formatDate(event.date)}`,
+                      },
                       event.item.title || tr('item.untitled'),
+                    ),
+                    h(
+                      'span',
+                      {
+                        className: 'gb-timeline-commit',
+                        title: event.commit ? event.commit.subject : undefined,
+                      },
+                      event.commit ? event.commit.hash : '',
                     ),
                     event.item.area
                       ? h('span', { className: 'gb-timeline-area' }, event.item.area)
