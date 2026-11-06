@@ -89,6 +89,24 @@ function readHeader(req, name) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+/**
+ * True for requests a same-origin page made. The token endpoint relies on this
+ * instead of a token: a browser sends `Sec-Fetch-Site`, and cross-origin script
+ * cannot read the JSON answer without CORS headers.
+ */
+function isSameOrigin(req, webServer) {
+  const origin = readHeader(req, 'origin');
+  let expected = '';
+  try {
+    expected = webServer.getOrigin();
+  } catch {
+    expected = '';
+  }
+  if (origin && expected && origin === expected) return true;
+  if (readHeader(req, 'sec-fetch-site') === 'same-origin') return true;
+  return false;
+}
+
 async function readBody(req, limit = 1 << 20) {
   const chunks = [];
   let size = 0;
@@ -549,6 +567,28 @@ export function apply(ctx, config = {}) {
           },
         }),
       'gameboard: action route',
+    );
+
+    // Fallback for pages that loaded before the token injection was installed:
+    // only a same-origin page can read this response.
+    scoped.effect(
+      () =>
+        webServer.register({
+          kind: 'exact',
+          path: '/gameboard/token',
+          handler: (req, res) => {
+            if (req.method !== 'GET') {
+              json(res, 405, { ok: false, error: 'method not allowed' });
+              return;
+            }
+            if (!isSameOrigin(req, webServer)) {
+              json(res, 403, { ok: false, error: 'forbidden' });
+              return;
+            }
+            json(res, 200, { ok: true, token });
+          },
+        }),
+      'gameboard: token route',
     );
   });
 

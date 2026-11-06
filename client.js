@@ -1749,7 +1749,7 @@ window.__ModuleLoader__.load({
         const [tab, setTab] = React.useState('overview');
         const snapshot = state.snapshot;
         const busy = state.busy;
-        const writable = readToken().length > 0;
+        const writable = Boolean(state.token) || readToken().length > 0;
         const pendingCount = snapshot
           ? snapshot.items.filter(
               (item) => item.gates.decision === 'pending' || item.gates.manual === 'pending' || item.gates.test === 'failing',
@@ -1907,6 +1907,7 @@ window.__ModuleLoader__.load({
         notice: null,
         refreshing: false,
         busy: null,
+        token: readToken(),
       });
       let inFlight = null;
       let queueManual = false;
@@ -1957,7 +1958,7 @@ window.__ModuleLoader__.load({
       }
       async function runAction(body, options) {
         const opts = options || {};
-        const token = readToken();
+        const token = readToken() || store.get().token;
         if (!token) {
           notify('error', 'header.writeOff');
           return null;
@@ -2011,6 +2012,25 @@ window.__ModuleLoader__.load({
         'gameboard: styles',
       );
       ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'gameboard: dictionaries');
+      // If the page was served before the token injection existed, ask the Host
+      // for it once; the endpoint only answers same-origin requests.
+      ctx.effect(
+        () => {
+          if (readToken()) return undefined;
+          let cancelled = false;
+          fetch('/gameboard/token', { headers: { accept: 'application/json' } })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body) => {
+              if (cancelled || !body || typeof body.token !== 'string') return;
+              if (body.token) patch({ token: body.token });
+            })
+            .catch(() => {});
+          return () => {
+            cancelled = true;
+          };
+        },
+        'gameboard: write token',
+      );
       ctx.effect(
         () => {
           let timer = null;
