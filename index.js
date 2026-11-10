@@ -102,6 +102,8 @@ function readHeader(req, name) {
 function isSameOrigin(req, webServer) {
   const origin = readHeader(req, 'origin');
   if (!origin) return true;
+  // Opaque origins (sandboxed frames, some custom-protocol loads) serialize as "null".
+  if (origin === 'null') return true;
   let expected = '';
   try {
     expected = webServer.getOrigin();
@@ -175,9 +177,20 @@ export function apply(ctx, config = {}) {
     String(settings.machine || process.env.GAMEBOARD_MACHINE || hostname() || 'unknown').trim() ||
     'unknown';
   // A configured token lets headless callers (scripts, other machines) drive the
-  // board; otherwise each Host process gets a fresh random one injected into the
-  // panel page.
-  const token = String(settings.token || '').trim() || randomUUID();
+  // board. Otherwise the first activation generates one and persists it in the
+  // machine config, so a plugin reload does not silently invalidate pages that
+  // are already open.
+  const configuredToken = String(settings.token || '').trim();
+  const token = configuredToken || randomUUID();
+  if (!configuredToken) {
+    try {
+      persistMachineConfig({ token });
+      settings.token = token;
+    } catch {
+      // a read-only profile still works; the page just has to be reloaded after
+      // the next plugin reload
+    }
+  }
   const boardRel = String(settings.boardDir || '.gameboard')
     .replace(/\\/g, '/')
     .replace(/\/+$/, '');

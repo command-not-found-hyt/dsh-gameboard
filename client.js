@@ -1991,9 +1991,33 @@ window.__ModuleLoader__.load({
         })();
         return inFlight;
       }
+      async function refreshToken() {
+        try {
+          const response = await fetch('/gameboard/token', { headers: { accept: 'application/json' } });
+          if (!response.ok) return '';
+          const body = await response.json();
+          const next = body && typeof body.token === 'string' ? body.token.trim() : '';
+          if (next) patch({ token: next });
+          return next;
+        } catch {
+          return '';
+        }
+      }
+      function postAction(token, body) {
+        return fetch('/gameboard/action', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            accept: 'application/json',
+            'x-gameboard-token': token,
+          },
+          body: JSON.stringify(body || {}),
+        });
+      }
       async function runAction(body, options) {
         const opts = options || {};
-        const token = readToken() || store.get().token;
+        let token = readToken() || store.get().token;
+        if (!token) token = await refreshToken();
         if (!token) {
           notify('error', 'header.writeOff');
           return null;
@@ -2001,15 +2025,12 @@ window.__ModuleLoader__.load({
         if (store.get().busy) return null;
         patch({ busy: opts.busyKey || 'action', notice: null, error: null });
         try {
-          const response = await fetch('/gameboard/action', {
-            method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-              accept: 'application/json',
-              'x-gameboard-token': token,
-            },
-            body: JSON.stringify(body || {}),
-          });
+          let response = await postAction(token, body);
+          if (response.status === 403) {
+            // The plugin may have reloaded (new token) while this page stayed open.
+            const next = await refreshToken();
+            if (next) response = await postAction(next, body);
+          }
           const payload = await readPayload(response);
           if (!response.ok) throw httpFailure(response, payload);
           if (!payload || payload.ok !== true) {
