@@ -26,6 +26,7 @@ import {
 } from './lib/board.js';
 import { attachGit, readGitLog } from './lib/git.js';
 import { scanBoard } from './lib/scan.js';
+import { SKILL_CONTENT, SKILL_DESCRIPTION, SKILL_NAME, SKILL_WHEN } from './lib/skill.js';
 
 export const inject = ['fs', 'tools', 'timer'];
 
@@ -924,6 +925,23 @@ export function apply(ctx, config = {}) {
       }),
     'gameboard: tool',
   );
+
+  // A runtime skill carries the same contract to agents that lack the tool:
+  // another editor, another harness, or a session where the plugin UI is absent.
+  ctx.inject(['skills'], (scoped) => {
+    scoped.effect(
+      () =>
+        scoped.skills.register({
+          name: SKILL_NAME,
+          description: SKILL_DESCRIPTION,
+          whenToUse: SKILL_WHEN,
+          content: SKILL_CONTENT,
+          source: 'runtime',
+          invocation: { modelInvocable: true, userInvocable: false },
+        }),
+      'gameboard: skill',
+    );
+  });
 
   // ---- prompt digest and command -----------------------------------------
 

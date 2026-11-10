@@ -1,6 +1,6 @@
 {
   "name": "dsh-gameboard",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "license": "MIT",
   "description": "Project status board for DSH: which game-dev work is built, which is tested, which needs a human decision, and which needs a manual step.",
@@ -33,6 +33,7 @@
     "lib/board.js",
     "lib/scan.js",
     "lib/git.js",
+    "lib/skill.js",
     "lib/scan.test.mjs",
     "cordis.patch.yml",
     "locale/*.json",

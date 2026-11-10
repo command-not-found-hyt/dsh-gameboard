@@ -32,6 +32,7 @@
 - **偏离检测**：按里程碑之间的用时算中位数，明显慢于中位（超过 2 倍且至少 1 天）的项会在时间线上标出来。
 - **Git 关联**：每次扫描读一次 `git log`，把工作项文件的历史提交挂到对应事件上；没提交的改动会标为 dirty。
 - **AI 工具 `gameboard`**：`summary` `list` `get` `add` `update` `note` `scan` `repos` `timeline`，让智能体自己维护看板、切换仓库、读最近发生了什么。
+- **运行时 Skill**：插件会注册一个 `gameboard` skill。没有这个工具的环境（别的编辑器、别的 harness）加载它，就知道看板格式、什么该记、什么绝对不能替用户决定。
 - **规则模板**：[`AGENTS.template.md`](AGENTS.template.md)，复制到项目根目录，任何智能体开工前读它就知道怎么维护。
 
 ## 安装
@@ -234,6 +235,18 @@ curl -X POST http://127.0.0.1:<port>/gameboard/action \
 3. **一个工作项一个文件，id 即文件名**。
 
 DSH 的 AI 摘要会自动提示「维护规则见扫描仓库根目录的 AGENTS.md」，即使某个终端没加载仓库指令也能被指到。
+
+## Skill 与 Tool 的分工
+
+插件激活时会向 DSH 注册一个 runtime skill（名字 `gameboard`）：**Tool 负责执行，Skill 负责解释**。Skill 是说明书，告诉智能体看板的四类门、文件格式、消息怎么写、什么绝对不能做；它本身不读写文件。
+
+优先级从强到弱：
+
+1. 有 `gameboard` 工具 → 直接用工具；
+2. 本机 DSH 在跑、但没有工具（例如另一个 harness）→ 调 HTTP：`GET /gameboard/snapshot`、`POST /gameboard/action`（带 `x-gameboard-token`，固定令牌见插件配置 `token`）；
+3. 都没有 → 按 Skill 里的格式直接编辑 `.gameboard/board/<id>.md`，只追加备注、不动 `decision` 字段。
+
+没有 DSH 的智能体（WorkBuddy、Claude Code 等）读不到 runtime skill，用 [`AGENTS.template.md`](AGENTS.template.md) 作为等价说明书放在仓库根目录即可。
 
 ## 多机协作
 
